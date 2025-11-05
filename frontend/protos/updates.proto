@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+option csharp_namespace = "Axle.Grpc";
+
+package axle;
+
+// Service for real-time data updates
+service UpdateStream {
+  // Subscribe to specific data stream updates
+  rpc Subscribe (SubscribeRequest) returns (stream UpdateMessage);
+
+  // Unsubscribe from a data stream
+  rpc Unsubscribe (UnsubscribeRequest) returns (UnsubscribeResponse);
+}
+
+// Request to subscribe to data updates
+message SubscribeRequest {
+  // Type of data to subscribe to (e.g., "users", "orders", "stats")
+  string dataType = 1;
+
+  // Optional filter criteria (JSON format)
+  string filter = 2;
+
+  // Authentication token
+  string token = 3;
+}
+
+// Request to unsubscribe from updates
+message UnsubscribeRequest {
+  string subscriptionId = 1;
+}
+
+// Response for unsubscribe
+message UnsubscribeResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Update message sent to subscribers
+message UpdateMessage {
+  // Unique ID for this update
+  string updateId = 1;
+
+  // Type of data being updated
+  string dataType = 2;
+
+  // Type of change (created, updated, deleted)
+  ChangeType changeType = 3;
+
+  // The actual data (JSON format for flexibility)
+  string data = 4;
+
+  // Timestamp of the change
+  int64 timestamp = 5;
+
+  // Optional metadata
+  map<string, string> metadata = 6;
+}
+
+// Types of changes
+enum ChangeType {
+  UNKNOWN = 0;
+  CREATED = 1;
+  UPDATED = 2;
+  DELETED = 3;
+  BATCH_UPDATE = 4;
+}
+
+// Predefined data types for common use cases
+message UserCountUpdate {
+  int32 totalUsers = 1;
+  int32 activeUsers = 2;
+  int32 newUsersToday = 3;
+}
+
+message StatsUpdate {
+  string statName = 1;
+  double value = 2;
+  string unit = 3;
+}
+
+message EntityUpdate {
+  string entityId = 1;
+  string entityType = 2;
+  string jsonData = 3;
+}
