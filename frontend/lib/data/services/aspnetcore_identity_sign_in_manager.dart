@@ -280,6 +280,35 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
     }
   }
 
+  /// Development-only: Get the last verification code sent to an email.
+  /// Returns null if not in development mode or if no code is available.
+  Future<String?> getDevVerificationCode(String email) async {
+    try {
+      final response = await _get(
+        ApiConfig.devVerificationCodePath,
+        queryParams: {'email': email},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final code = data['verificationCode'] as String?;
+        developer.log(
+          'Dev verification code retrieved',
+          name: 'AspNetCoreIdentity',
+        );
+        return code;
+      }
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to get dev verification code',
+        name: 'AspNetCoreIdentity',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+    return null;
+  }
+
   @override
   Future<bool> isSignedIn() async {
     final hasTokens = await _tokenStorage.hasTokens();

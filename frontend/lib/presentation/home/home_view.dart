@@ -57,6 +57,12 @@ class HomeView extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 48),
+              FilledButton.icon(
+                onPressed: () => context.push('/grpc-demo'),
+                icon: const Icon(Icons.stream),
+                label: const Text('gRPC Live Updates Demo'),
+              ),
             ],
           ),
         ),
