@@ -158,3 +158,4 @@
 /Users/jamie/Developer/github/axle/backend/bin/Debug/net9.0/Grpc.Net.Client.dll
 /Users/jamie/Developer/github/axle/backend/bin/Debug/net9.0/Grpc.Net.ClientFactory.dll
 /Users/jamie/Developer/github/axle/backend/bin/Debug/net9.0/Grpc.Net.Common.dll
+/Users/jamie/Developer/github/axle/backend/obj/Debug/net9.0/Axle.sourcelink.json
