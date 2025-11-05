@@ -5,9 +5,7 @@ import 'package:axle/generated/updates.pb.dart';
 
 /// Demo widget showing real-time updates via gRPC
 class LiveUpdatesDemo extends StatefulWidget {
-  const LiveUpdatesDemo({
-    super.key,
-  });
+  const LiveUpdatesDemo({super.key});
 
   @override
   State<LiveUpdatesDemo> createState() => _LiveUpdatesDemoState();
@@ -26,12 +24,7 @@ class _LiveUpdatesDemoState extends State<LiveUpdatesDemo> {
   String _selectedDataType = 'users';
   int _userCount = 6; // Example starting value
 
-  final List<String> _dataTypes = [
-    'users',
-    'orders',
-    'stats',
-    'notifications',
-  ];
+  final List<String> _dataTypes = ['users', 'orders', 'stats', 'notifications'];
 
   @override
   void dispose() {
@@ -110,10 +103,7 @@ class _LiveUpdatesDemoState extends State<LiveUpdatesDemo> {
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
@@ -136,10 +126,7 @@ class _LiveUpdatesDemoState extends State<LiveUpdatesDemo> {
                 children: [
                   const Text(
                     'gRPC Stream Controls',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -210,9 +197,7 @@ class _LiveUpdatesDemoState extends State<LiveUpdatesDemo> {
                       ),
                       Text(
                         'Updates: ${_updates.length}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -300,13 +285,7 @@ class _StatCard extends StatelessWidget {
             color: color,
           ),
         ),
-        Text(
-          title,
-          style: const TextStyle(
-            color: Colors.grey,
-            fontSize: 12,
-          ),
-        ),
+        Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12)),
       ],
     );
   }
