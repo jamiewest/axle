@@ -7,6 +7,7 @@ import 'package:axle/presentation/auth/forgot_password_view.dart';
 import 'package:axle/presentation/auth/login_view.dart';
 import 'package:axle/presentation/auth/reset_password_view.dart';
 import 'package:axle/presentation/home/home_view.dart';
+import 'package:axle/presentation/examples/live_updates_demo.dart';
 
 /// Creates and configures the application router.
 ///
@@ -69,6 +70,10 @@ GoRouter createAppRouter(SignInManager signInManager) {
         builder: (context, state) => HomeView(
           signInManager: signInManager,
         ),
+      ),
+      GoRoute(
+        path: '/grpc-demo',
+        builder: (context, state) => const LiveUpdatesDemo(),
       ),
     ],
   );

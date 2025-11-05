@@ -22,6 +22,9 @@ class ApiConfig {
   static const String manage2faPath = '/manage/2fa';
   static const String manageInfoPath = '/manage/info';
 
+  /// Development-only endpoint to retrieve verification codes.
+  static const String devVerificationCodePath = '/dev/verification-code';
+
   /// Default development configuration.
   factory ApiConfig.development() {
     return const ApiConfig(

@@ -66,6 +66,17 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddSingleton<IUpdateNotifier, UpdateNotifier>();
 
+// Register email service (fake for dev, production for prod)
+var useFakeEmail = builder.Configuration.GetValue<bool>("EmailSettings:UseFakeEmailService");
+if (useFakeEmail)
+{
+    builder.Services.AddSingleton<IEmailService, FakeEmailService>();
+}
+else
+{
+    builder.Services.AddSingleton<IEmailService, ProductionEmailService>();
+}
+
 // Add gRPC
 builder.Services.AddGrpc();
 
@@ -101,6 +112,7 @@ app.MapPost("/register", async (
     RegisterRequest request,
     UserManager<ApplicationUser> userManager,
     IUpdateNotifier notifier,
+    IEmailService emailService,
     ApplicationDbContext context) =>
 {
     var user = new ApplicationUser
@@ -117,8 +129,11 @@ app.MapPost("/register", async (
         return Results.BadRequest(new { errors = result.Errors.Select(e => e.Description) });
     }
 
-    // Generate email confirmation token (if email confirmation is enabled)
+    // Generate email confirmation token
     var confirmationToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
+
+    // Send verification email
+    await emailService.SendVerificationEmailAsync(user.Email!, confirmationToken, user.Id);
 
     // Notify subscribers about new user (gRPC real-time update)
     var totalUsers = await context.Users.CountAsync();
@@ -127,13 +142,10 @@ app.MapPost("/register", async (
         new { totalUsers, newUserId = user.Id, userName = user.UserName }
     );
 
-    // In production, send this token via email
-    // For now, we'll return it in the response for testing
     return Results.Ok(new
     {
-        message = "User registered successfully",
-        userId = user.Id,
-        confirmationToken // Remove this in production
+        message = "User registered successfully. Please check your email for verification code.",
+        userId = user.Id
     });
 })
 .WithName("Register");
@@ -248,7 +260,8 @@ app.MapGet("/confirmEmail", async (
 // POST /resendConfirmationEmail
 app.MapPost("/resendConfirmationEmail", async (
     ResendConfirmationRequest request,
-    UserManager<ApplicationUser> userManager) =>
+    UserManager<ApplicationUser> userManager,
+    IEmailService emailService) =>
 {
     var user = await userManager.FindByEmailAsync(request.Email);
     if (user == null)
@@ -264,12 +277,12 @@ app.MapPost("/resendConfirmationEmail", async (
 
     var confirmationToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
 
-    // In production, send this token via email
-    // For now, return it in the response for testing
+    // Send verification email
+    await emailService.SendVerificationEmailAsync(user.Email!, confirmationToken, user.Id);
+
     return Results.Ok(new
     {
-        message = "Confirmation email sent",
-        confirmationToken // Remove this in production
+        message = "Confirmation email sent. Please check your email for verification code."
     });
 })
 .WithName("ResendConfirmationEmail");
@@ -277,7 +290,8 @@ app.MapPost("/resendConfirmationEmail", async (
 // POST /forgotPassword
 app.MapPost("/forgotPassword", async (
     ForgotPasswordRequest request,
-    UserManager<ApplicationUser> userManager) =>
+    UserManager<ApplicationUser> userManager,
+    IEmailService emailService) =>
 {
     var user = await userManager.FindByEmailAsync(request.Email);
 
@@ -289,12 +303,12 @@ app.MapPost("/forgotPassword", async (
 
     var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
 
-    // In production, send this token via email
-    // For now, return it in the response for testing
+    // Send password reset email
+    await emailService.SendPasswordResetEmailAsync(user.Email!, resetToken, user.Id);
+
     return Results.Ok(new
     {
-        message = "Password reset link sent",
-        resetToken // Remove this in production
+        message = "Password reset link sent. Please check your email."
     });
 })
 .WithName("ForgotPassword");
@@ -348,6 +362,32 @@ app.MapGet("/manage/info", async (HttpContext context, UserManager<ApplicationUs
 })
 .RequireAuthorization()
 .WithName("GetUserInfo");
+
+// GET /dev/verification-code - Development only endpoint to get verification code
+app.MapGet("/dev/verification-code", (
+    string email,
+    IEmailService emailService,
+    IWebHostEnvironment env) =>
+{
+    if (!env.IsDevelopment())
+    {
+        return Results.NotFound();
+    }
+
+    var code = emailService.GetLastVerificationCode(email);
+    if (code == null)
+    {
+        return Results.NotFound(new { message = "No verification code found for this email" });
+    }
+
+    return Results.Ok(new
+    {
+        email,
+        verificationCode = code,
+        message = "This endpoint is only available in development mode"
+    });
+})
+.WithName("GetDevVerificationCode");
 
 // Sample protected endpoint - Weather Forecast
 app.MapGet("/weatherforecast", () =>
