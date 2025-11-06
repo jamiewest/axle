@@ -1,7 +1,6 @@
 ﻿var builder = DistributedApplication.CreateBuilder(args);
 
-// Add SQLite database connection string
-var database = builder.AddConnectionString("sqldata", "Data Source=../Axle.WebApi/axle.db");
+var database = builder.AddSqlite("sqlite");
 
 // Add migration service - runs migrations at startup
 var migrations = builder.AddProject<Projects.Axle_MigrationService>("migrations")

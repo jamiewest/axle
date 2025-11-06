@@ -111,8 +111,14 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         developer.log('Account created', name: 'AspNetCoreIdentity');
+
+        // Extract userId from response
+        final responseBody = jsonDecode(response.body) as Map<String, dynamic>;
+        final userId = responseBody['userId'] as String?;
+
         return AuthResult.success(
           message: 'Account created. Please check your email to confirm.',
+          userId: userId,
         );
       } else {
         final errorData = _parseErrorResponse(response);
@@ -441,21 +447,34 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (body.containsKey('errors')) {
-        final errors = body['errors'] as Map<String, dynamic>;
-        final formattedErrors = <String, List<String>>{};
+        final errorsValue = body['errors'];
 
-        errors.forEach((key, value) {
-          if (value is List) {
-            formattedErrors[key] = value.cast<String>();
-          } else if (value is String) {
-            formattedErrors[key] = [value];
-          }
-        });
+        // Handle errors as an array (ASP.NET Core Identity format)
+        if (errorsValue is List) {
+          final errorMessages = errorsValue.cast<String>();
+          return {
+            'message': errorMessages.join('\n'),
+            'errors': <String, List<String>>{'general': errorMessages},
+          };
+        }
 
-        return {
-          'message': body['title'] as String? ?? 'Validation failed',
-          'errors': formattedErrors,
-        };
+        // Handle errors as a map (validation errors format)
+        if (errorsValue is Map<String, dynamic>) {
+          final formattedErrors = <String, List<String>>{};
+
+          errorsValue.forEach((key, value) {
+            if (value is List) {
+              formattedErrors[key] = value.cast<String>();
+            } else if (value is String) {
+              formattedErrors[key] = [value];
+            }
+          });
+
+          return {
+            'message': body['title'] as String? ?? 'Validation failed',
+            'errors': formattedErrors,
+          };
+        }
       }
 
       if (body.containsKey('title')) {

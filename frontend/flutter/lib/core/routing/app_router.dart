@@ -32,7 +32,18 @@ GoRouter createAppRouter(SignInManager signInManager) {
       GoRoute(
         path: '/confirm-account',
         builder: (context, state) {
-          final email = state.extra as String?;
+          final extra = state.extra;
+          String? email;
+          String? userId;
+
+          // Handle both String (legacy) and Map (new) formats
+          if (extra is String) {
+            email = extra;
+          } else if (extra is Map<String, dynamic>) {
+            email = extra['email'] as String?;
+            userId = extra['userId'] as String?;
+          }
+
           if (email == null) {
             return const _ErrorView(
               message: 'Email address is required',
@@ -41,6 +52,7 @@ GoRouter createAppRouter(SignInManager signInManager) {
           return ConfirmAccountView(
             signInManager: signInManager,
             email: email,
+            userId: userId,
           );
         },
       ),

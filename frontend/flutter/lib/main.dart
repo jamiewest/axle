@@ -1,12 +1,66 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:axle/core/config/api_config.dart';
 import 'package:axle/core/routing/app_router.dart';
 import 'package:axle/data/services/aspnetcore_identity_sign_in_manager.dart';
 import 'package:axle/data/services/mock_sign_in_manager.dart';
+import 'package:axle/data/services/telemetry_service.dart';
+import 'package:axle/domain/models/telemetry_config.dart';
 import 'package:axle/domain/services/sign_in_manager.dart';
 
+/// Application entry point.
+///
+/// Initializes telemetry and runs the app with error handling.
 void main() {
-  runApp(const MainApp());
+  // Run app with zone guarding for error capture
+  // All initialization must happen inside the zone to avoid zone mismatch
+  runZonedGuarded(
+    () async {
+      // Ensure Flutter binding is initialized
+      WidgetsFlutterBinding.ensureInitialized();
+
+      // Load environment variables
+      await dotenv.load(fileName: '.env');
+
+      // Initialize telemetry if enabled
+      await _initializeTelemetry();
+
+      // Run the app
+      runApp(const MainApp());
+    },
+    (error, stack) {
+      // Capture uncaught async errors
+      TelemetryService().logError(
+        'Uncaught async error',
+        error: error,
+        stackTrace: stack,
+        attributes: {'error.source': 'runZonedGuarded'},
+      );
+    },
+  );
+}
+
+/// Initialize telemetry service based on environment configuration.
+Future<void> _initializeTelemetry() async {
+  final enabled = dotenv.env['TELEMETRY_ENABLED']?.toLowerCase() == 'true';
+  final serviceUrl = dotenv.env['TELEMETRY_SERVICE_URL'] ?? 'http://localhost:5200';
+
+  if (enabled) {
+    final config = TelemetryConfig.development(
+      serviceUrl: serviceUrl,
+      appVersion: '0.1.0',
+    );
+
+    await TelemetryService().initialize(config: config);
+    TelemetryService().setupErrorHandlers();
+  } else {
+    // Initialize as disabled
+    await TelemetryService().initialize(
+      config: TelemetryConfig.disabled(),
+    );
+  }
 }
 
 /// Main application widget.

@@ -10,11 +10,13 @@ class ConfirmAccountView extends StatefulWidget {
   const ConfirmAccountView({
     required this.signInManager,
     required this.email,
+    this.userId,
     super.key,
   });
 
   final SignInManager signInManager;
   final String email;
+  final String? userId;
 
   @override
   State<ConfirmAccountView> createState() => _ConfirmAccountViewState();
@@ -77,7 +79,7 @@ class _ConfirmAccountViewState extends State<ConfirmAccountView> {
 
     try {
       final result = await widget.signInManager.confirmAccount(
-        email: widget.email,
+        email: widget.userId ?? widget.email,
         code: _codeController.text.trim(),
       );
 

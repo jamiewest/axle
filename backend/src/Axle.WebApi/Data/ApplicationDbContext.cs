@@ -11,18 +11,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
     private readonly IHttpContextAccessor? _httpContextAccessor;
 
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : base(options)
-    {
-    }
-
-    public ApplicationDbContext(
-        DbContextOptions<ApplicationDbContext> options,
-        IHttpContextAccessor httpContextAccessor)
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor? httpContextAccessor = null)
         : base(options)
     {
         _httpContextAccessor = httpContextAccessor;
     }
+
 
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Tenant> Tenants { get; set; }

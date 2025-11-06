@@ -48,7 +48,7 @@ class _CreateAccountViewState extends State<CreateAccountView> {
       if (!mounted) return;
 
       if (result.success) {
-        _showSuccessDialog();
+        _showSuccessDialog(userId: result.userId);
       } else {
         final errorMessage = result.formattedErrors ??
             result.message ??
@@ -65,7 +65,7 @@ class _CreateAccountViewState extends State<CreateAccountView> {
     }
   }
 
-  void _showSuccessDialog() {
+  void _showSuccessDialog({String? userId}) {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -81,7 +81,10 @@ class _CreateAccountViewState extends State<CreateAccountView> {
               Navigator.of(context).pop();
               context.push(
                 '/confirm-account',
-                extra: _emailController.text.trim(),
+                extra: {
+                  'email': _emailController.text.trim(),
+                  'userId': userId,
+                },
               );
             },
             child: const Text('Enter Confirmation Code'),
@@ -197,7 +200,7 @@ class _CreateAccountViewState extends State<CreateAccountView> {
                     controller: _passwordController,
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      hintText: 'Enter your password',
+                      hintText: 'Min 6 chars with uppercase, lowercase & digit',
                       prefixIcon: const Icon(Icons.lock_outlined),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -219,8 +222,17 @@ class _CreateAccountViewState extends State<CreateAccountView> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter a password';
                       }
-                      if (value.length < 8) {
-                        return 'Password must be at least 8 characters';
+                      if (value.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      if (!value.contains(RegExp(r'[A-Z]'))) {
+                        return 'Password must contain at least one uppercase letter';
+                      }
+                      if (!value.contains(RegExp(r'[a-z]'))) {
+                        return 'Password must contain at least one lowercase letter';
+                      }
+                      if (!value.contains(RegExp(r'[0-9]'))) {
+                        return 'Password must contain at least one digit';
                       }
                       return null;
                     },
