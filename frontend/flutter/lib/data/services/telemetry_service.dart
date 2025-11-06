@@ -1,10 +1,10 @@
 import 'dart:developer' as developer;
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:universal_platform/universal_platform.dart';
 
 import 'package:axle/data/services/dev_logs_telemetry_provider.dart';
 import 'package:axle/domain/models/telemetry_config.dart';
@@ -248,23 +248,23 @@ class TelemetryService {
         attributes['device.platform'] = 'web';
         final browserInfo = await DeviceInfoPlugin().webBrowserInfo;
         attributes['device.browser'] = browserInfo.browserName.name;
-      } else if (Platform.isIOS) {
+      } else if (UniversalPlatform.isIOS) {
         attributes['device.platform'] = 'iOS';
         final iosInfo = await DeviceInfoPlugin().iosInfo;
         attributes['device.model'] = iosInfo.utsname.machine;
         attributes['device.os.version'] = iosInfo.systemVersion;
-      } else if (Platform.isAndroid) {
+      } else if (UniversalPlatform.isAndroid) {
         attributes['device.platform'] = 'Android';
         final androidInfo = await DeviceInfoPlugin().androidInfo;
         attributes['device.model'] = androidInfo.model;
         attributes['device.os.version'] = androidInfo.version.release;
-      } else if (Platform.isMacOS) {
+      } else if (UniversalPlatform.isMacOS) {
         attributes['device.platform'] = 'macOS';
         final macOsInfo = await DeviceInfoPlugin().macOsInfo;
         attributes['device.model'] = macOsInfo.model;
-      } else if (Platform.isWindows) {
+      } else if (UniversalPlatform.isWindows) {
         attributes['device.platform'] = 'Windows';
-      } else if (Platform.isLinux) {
+      } else if (UniversalPlatform.isLinux) {
         attributes['device.platform'] = 'Linux';
       }
     } catch (e) {

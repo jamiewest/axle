@@ -1,11 +1,13 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'secure_storage_interface.dart';
+import 'secure_storage_factory.dart';
 
 /// Service for securely storing authentication tokens.
+/// Uses platform-specific storage: secure keychain on mobile, localStorage on web.
 class TokenStorageService {
-  TokenStorageService({FlutterSecureStorage? secureStorage})
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+  TokenStorageService({SecureStorageInterface? secureStorage})
+      : _secureStorage = secureStorage ?? SecureStorageFactory.create();
 
-  final FlutterSecureStorage _secureStorage;
+  final SecureStorageInterface _secureStorage;
 
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
@@ -19,16 +21,15 @@ class TokenStorageService {
     required DateTime expiresAt,
     String? userId,
   }) async {
-    await Future.wait([
-      _secureStorage.write(key: _accessTokenKey, value: accessToken),
-      _secureStorage.write(key: _refreshTokenKey, value: refreshToken),
-      _secureStorage.write(
-        key: _tokenExpiryKey,
-        value: expiresAt.toIso8601String(),
-      ),
-      if (userId != null)
-        _secureStorage.write(key: _userIdKey, value: userId),
-    ]);
+    await _secureStorage.write(key: _accessTokenKey, value: accessToken);
+    await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
+    await _secureStorage.write(
+      key: _tokenExpiryKey,
+      value: expiresAt.toIso8601String(),
+    );
+    if (userId != null) {
+      await _secureStorage.write(key: _userIdKey, value: userId);
+    }
   }
 
   /// Gets the stored access token.
@@ -62,12 +63,10 @@ class TokenStorageService {
 
   /// Clears all stored tokens.
   Future<void> clearTokens() async {
-    await Future.wait([
-      _secureStorage.delete(key: _accessTokenKey),
-      _secureStorage.delete(key: _refreshTokenKey),
-      _secureStorage.delete(key: _tokenExpiryKey),
-      _secureStorage.delete(key: _userIdKey),
-    ]);
+    await _secureStorage.delete(key: _accessTokenKey);
+    await _secureStorage.delete(key: _refreshTokenKey);
+    await _secureStorage.delete(key: _tokenExpiryKey);
+    await _secureStorage.delete(key: _userIdKey);
   }
 
   /// Checks if tokens are stored.

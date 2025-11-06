@@ -19,10 +19,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 builder.Services.AddProblemDetails();
+
+// Configure detailed console logging
 builder.Logging.AddSimpleConsole(options =>
 {
-    options.TimestampFormat = "HH:mm:ss ";
-    options.SingleLine = true;
+    options.TimestampFormat = "[HH:mm:ss] ";
+    options.SingleLine = false;
+    options.IncludeScopes = true;
 });
 
 builder.Logging.AddDebug();
@@ -137,6 +140,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseHttpLogging(); // Enable HTTP request/response logging
 app.UseCors("AllowFlutterApp");
 app.UseAuthentication();
 app.UseTenantMiddleware(); // Add tenant middleware after authentication
