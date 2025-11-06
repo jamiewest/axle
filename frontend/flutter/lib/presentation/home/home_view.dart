@@ -25,6 +25,11 @@ class HomeView extends StatelessWidget {
         title: const Text('Home'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => context.push('/settings'),
+            tooltip: 'Settings',
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _handleSignOut(context),
             tooltip: 'Sign Out',
@@ -62,6 +67,12 @@ class HomeView extends StatelessWidget {
                 onPressed: () => context.push('/grpc-demo'),
                 icon: const Icon(Icons.stream),
                 label: const Text('gRPC Live Updates Demo'),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/settings'),
+                icon: const Icon(Icons.settings),
+                label: const Text('Settings'),
               ),
             ],
           ),

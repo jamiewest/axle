@@ -7,6 +7,8 @@ import 'package:axle/core/routing/app_router.dart';
 import 'package:axle/data/services/aspnetcore_identity_sign_in_manager.dart';
 import 'package:axle/data/services/mock_sign_in_manager.dart';
 import 'package:axle/data/services/telemetry_service.dart';
+import 'package:axle/data/services/app_config_service.dart';
+import 'package:axle/data/services/connectivity_service.dart';
 import 'package:axle/domain/models/telemetry_config.dart';
 import 'package:axle/domain/services/sign_in_manager.dart';
 
@@ -23,6 +25,12 @@ void main() {
 
       // Load environment variables
       await dotenv.load(fileName: '.env');
+
+      // Initialize app configuration service
+      await AppConfigService().initialize();
+
+      // Initialize connectivity service
+      await ConnectivityService().initialize();
 
       // Initialize telemetry if enabled
       await _initializeTelemetry();
@@ -78,9 +86,6 @@ class _MainAppState extends State<MainApp> {
   /// Set to false to use real ASP.NET Core Identity API.
   static const bool _useMockAuth = false;
 
-  /// API configuration for production use.
-  static const String _apiBaseUrl = 'http://localhost:5103';
-
   late final SignInManager _signInManager;
   late final _router = createAppRouter(_signInManager);
 
@@ -94,7 +99,13 @@ class _MainAppState extends State<MainApp> {
     if (_useMockAuth) {
       return MockSignInManager();
     } else {
-      final apiConfig = ApiConfig(baseUrl: _apiBaseUrl);
+      // Get API URL from stored config, .env, or default
+      final configService = AppConfigService();
+      final apiBaseUrl = configService.isUsingCustomUrl()
+          ? configService.getApiUrl()
+          : (dotenv.env['API_URL'] ?? configService.getApiUrl());
+
+      final apiConfig = ApiConfig(baseUrl: apiBaseUrl);
       return AspNetCoreIdentitySignInManager(apiConfig: apiConfig);
     }
   }

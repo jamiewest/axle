@@ -9,6 +9,7 @@ import 'package:axle/presentation/auth/login_view.dart';
 import 'package:axle/presentation/auth/reset_password_view.dart';
 import 'package:axle/presentation/home/home_view.dart';
 import 'package:axle/presentation/examples/live_updates_demo.dart';
+import 'package:axle/presentation/screens/settings_screen.dart';
 
 /// Navigation observer for logging route changes.
 class _NavigationObserver extends NavigatorObserver {
@@ -144,6 +145,10 @@ GoRouter createAppRouter(SignInManager signInManager) {
       GoRoute(
         path: '/grpc-demo',
         builder: (context, state) => const LiveUpdatesDemo(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
     ],
   );

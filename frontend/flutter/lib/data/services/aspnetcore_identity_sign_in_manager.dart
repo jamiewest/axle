@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:axle/core/config/api_config.dart';
 import 'package:axle/core/logging/app_logger.dart';
+import 'package:axle/core/exceptions/network_exception.dart';
 import 'package:axle/data/models/confirm_email_request.dart';
 import 'package:axle/data/models/forgot_password_request.dart';
 import 'package:axle/data/models/login_request.dart';
@@ -79,8 +80,17 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
         'User authentication',
         error: e,
         stackTrace: stackTrace,
-        attributes: {'error_type': 'network_error'},
+        attributes: {
+          'error_type': 'network_error',
+          'is_network_exception': NetworkExceptionHelper.isNetworkException(e),
+        },
       );
+
+      // Provide user-friendly error message for network issues
+      if (NetworkExceptionHelper.isNetworkException(e)) {
+        return AuthResult.failure(NetworkExceptionHelper.getUserFriendlyMessage(e));
+      }
+
       return AuthResult.failure('Network error: ${e.toString()}');
     }
   }
