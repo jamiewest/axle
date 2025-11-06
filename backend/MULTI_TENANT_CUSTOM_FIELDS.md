@@ -9,9 +9,9 @@ This system enables multi-tenancy with configurable custom fields per tenant. It
 ### Core Concepts
 
 1. **Tenant** - An organization or workspace with isolated data
-2. **WorkItem** - Generic entity that can represent anything (Task, Project, Customer, etc.)
+2. **Node** - Generic entity that can represent anything (Task, Project, Customer, etc.)
 3. **FieldDefinition** - Defines what custom fields can exist for a specific entity type
-4. **Meta** - JSON column storing actual custom field values in WorkItem
+4. **Meta** - JSON column storing actual custom field values in Node
 
 ```
 ┌─────────────────────┐
@@ -22,7 +22,7 @@ This system enables multi-tenancy with configurable custom fields per tenant. It
            │ maps to
            ↓
 ┌─────────────────────┐
-│     WorkItem        │ ──→ Actual data
+│       Node          │ ──→ Actual data
 │  [meta JSON blob]   │     { "field_key": "value" }
 └─────────────────────┘
 ```
@@ -47,7 +47,7 @@ This system enables multi-tenancy with configurable custom fields per tenant. It
 
 **Unique constraint:** (TenantId, UserId)
 
-### WorkItem
+### Node
 - `Id` (Guid) - Primary key
 - `TenantId` (FK) - Tenant isolation
 - `ParentId` (FK, nullable) - Hierarchical parent
@@ -76,7 +76,7 @@ This system enables multi-tenancy with configurable custom fields per tenant. It
 ### FieldDefinition
 - `Id` (Guid) - Primary key
 - `TenantId` (FK) - Tenant isolation
-- `EntityType` (string) - Which WorkItem type this field applies to
+- `EntityType` (string) - Which Node type this field applies to
 - `FieldName` (string) - Display name
 - `FieldKey` (string) - Unique key for Meta JSON
 - `FieldType` (string) - Data type (text, number, date, select, etc.)
@@ -121,7 +121,7 @@ This system enables multi-tenancy with configurable custom fields per tenant. It
 
 ### Complex Types
 - `json` - Arbitrary JSON data
-- `relation` - Reference to another WorkItem
+- `relation` - Reference to another Node
 - `user` - Reference to a User
 
 ## Validation Rules
@@ -177,28 +177,28 @@ Example UiMetadata JSON:
 **GET /api/tenants/{id}** - Get tenant by ID
 - Returns: `TenantResponse`
 
-### Work Items
+### Nodes
 
-**GET /api/work-items** - List work items (paginated)
+**GET /api/nodes** - List nodes (paginated)
 - Query params: `page`, `pageSize`, `type`, `parentId`, `search`
-- Returns: `WorkItemListResponse`
+- Returns: `NodeListResponse`
 
-**GET /api/work-items/{id}** - Get single work item
-- Returns: `WorkItemResponse`
+**GET /api/nodes/{id}** - Get single node
+- Returns: `NodeResponse`
 
-**POST /api/work-items** - Create work item
-- Body: `CreateWorkItemRequest`
-- Returns: `WorkItemResponse`
+**POST /api/nodes** - Create node
+- Body: `CreateNodeRequest`
+- Returns: `NodeResponse`
 
-**PUT /api/work-items/{id}** - Update work item
-- Body: `UpdateWorkItemRequest`
-- Returns: `WorkItemResponse`
+**PUT /api/nodes/{id}** - Update node
+- Body: `UpdateNodeRequest`
+- Returns: `NodeResponse`
 
-**DELETE /api/work-items/{id}** - Delete work item
+**DELETE /api/nodes/{id}** - Delete node
 - Returns: 204 No Content
 
-**GET /api/work-items/{id}/children** - Get child work items
-- Returns: `List<WorkItemResponse>`
+**GET /api/nodes/{id}/children** - Get child nodes
+- Returns: `List<NodeResponse>`
 
 ### Field Definitions
 
@@ -242,7 +242,7 @@ Example UiMetadata JSON:
 
 The tenant ID is stored in `HttpContext.Items["TenantId"]` and used by:
 - EF Core global query filters
-- Services (WorkItemService, FieldDefinitionService)
+- Services (NodeService, FieldDefinitionService)
 
 ### EF Core Query Filters
 
@@ -292,10 +292,10 @@ POST /api/field-definitions
 }
 ```
 
-### 3. Create a Work Item with Custom Fields
+### 3. Create a Node with Custom Fields
 
 ```bash
-POST /api/work-items
+POST /api/nodes
 Header: X-Tenant-Id: <tenant-id>
 {
   "type": "Task",
@@ -308,10 +308,10 @@ Header: X-Tenant-Id: <tenant-id>
 }
 ```
 
-### 4. Query Work Items
+### 4. Query Nodes
 
 ```bash
-GET /api/work-items?type=Task&page=1&pageSize=20
+GET /api/nodes?type=Task&page=1&pageSize=20
 Header: X-Tenant-Id: <tenant-id>
 ```
 
@@ -346,12 +346,12 @@ const errors = await Promise.all(
 
 ## Services
 
-### IWorkItemService
+### INodeService
 - `GetByIdAsync(id)` - Get single item
 - `GetAllAsync(type, parentId)` - Get all items
 - `GetPagedAsync(...)` - Paginated query
-- `CreateAsync(workItem)` - Create item
-- `UpdateAsync(id, workItem)` - Update item
+- `CreateAsync(node)` - Create item
+- `UpdateAsync(id, node)` - Update item
 - `DeleteAsync(id)` - Delete item
 - `GetChildrenAsync(parentId)` - Get children
 - `GetAncestorsAsync(id)` - Get ancestor path
@@ -375,7 +375,7 @@ const errors = await Promise.all(
 
 ### Field Types
 - Choose the most specific type (use `email` instead of `text`)
-- Use `relation` for references to other WorkItems
+- Use `relation` for references to other Nodes
 - Use `user` for references to users
 
 ### Validation
@@ -404,7 +404,7 @@ If migrating from single-tenant:
 
 1. Create a default tenant
 2. Migrate existing users to default tenant as Owners
-3. Migrate existing entities to WorkItems with Type
+3. Migrate existing entities to Nodes with Type
 4. Extract common fields into FieldDefinitions
 5. Move data to Meta JSON column
 6. Test thoroughly before removing old tables
@@ -433,7 +433,7 @@ If migrating from single-tenant:
 
 ## Troubleshooting
 
-**Q: WorkItems not showing up**
+**Q: Nodes not showing up**
 - Check tenant context in request (X-Tenant-Id header or JWT claim)
 - Verify tenant is active
 - Check user is member of tenant

@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Axle.DTOs;
 
-public record CreateWorkItemRequest(
+public record CreateNodeRequest(
     string Type,
     string Name,
     string? Subtype = null,
@@ -10,7 +10,7 @@ public record CreateWorkItemRequest(
     Dictionary<string, object>? Meta = null
 );
 
-public record UpdateWorkItemRequest(
+public record UpdateNodeRequest(
     string Name,
     string Type,
     string? Subtype = null,
@@ -18,7 +18,7 @@ public record UpdateWorkItemRequest(
     Dictionary<string, object>? Meta = null
 );
 
-public record WorkItemResponse(
+public record NodeResponse(
     Guid Id,
     Guid TenantId,
     Guid? ParentId,
@@ -34,8 +34,8 @@ public record WorkItemResponse(
     string? ModifiedByName
 );
 
-public record WorkItemListResponse(
-    List<WorkItemResponse> Items,
+public record NodeListResponse(
+    List<NodeResponse> Items,
     int TotalCount,
     int Page,
     int PageSize

@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Axle.Models;
 
 /// <summary>
-/// Defines a custom field that can be used in WorkItem metadata.
+/// Defines a custom field that can be used in Node metadata.
 /// Each tenant can define their own fields per entity type.
 /// </summary>
 public class FieldDefinition
@@ -25,7 +25,7 @@ public class FieldDefinition
 
     /// <summary>
     /// Entity type this field applies to (e.g., "Task", "Project", "Customer").
-    /// Must match WorkItem.Type.
+    /// Must match Node.Type.
     /// </summary>
     [Required]
     [MaxLength(100)]
@@ -40,7 +40,7 @@ public class FieldDefinition
 
     /// <summary>
     /// Unique key for this field within the tenant and entity type.
-    /// Used as the key in WorkItem.Meta JSON.
+    /// Used as the key in Node.Meta JSON.
     /// Example: "priority", "due_date", "custom_status"
     /// </summary>
     [Required]
@@ -124,6 +124,6 @@ public static class FieldTypes
 
     // Complex types
     public const string Json = "json";
-    public const string Relation = "relation";  // References another WorkItem
+    public const string Relation = "relation";  // References another Node
     public const string User = "user";          // References a User
 }
