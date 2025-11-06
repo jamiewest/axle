@@ -67,7 +67,7 @@ builder.Services.AddAuthorization();
 // Register custom services
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddSingleton<IUpdateNotifier, UpdateNotifier>();
-builder.Services.AddScoped<IWorkItemService, WorkItemService>();
+builder.Services.AddScoped<INodeService, NodeService>();
 builder.Services.AddScoped<IFieldDefinitionService, FieldDefinitionService>();
 
 // Add HttpContextAccessor for tenant context
@@ -435,9 +435,9 @@ app.MapPost("/api/trigger-update", async (
 
 // ==================== Multi-Tenant Custom Fields Endpoints ====================
 
-// Map tenant, work item, and field definition endpoints
+// Map tenant, node, and field definition endpoints
 app.MapTenantEndpoints();
-app.MapWorkItemEndpoints();
+app.MapNodeEndpoints();
 app.MapFieldDefinitionEndpoints();
 
 // Ensure database is created

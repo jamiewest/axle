@@ -34,12 +34,12 @@ public class ApplicationUser : IdentityUser
     public ICollection<TenantUser> TenantMemberships { get; set; } = new List<TenantUser>();
 
     /// <summary>
-    /// Work items created by this user.
+    /// Nodes created by this user.
     /// </summary>
-    public ICollection<WorkItem> CreatedWorkItems { get; set; } = new List<WorkItem>();
+    public ICollection<Node> CreatedNodes { get; set; } = new List<Node>();
 
     /// <summary>
-    /// Work items last modified by this user.
+    /// Nodes last modified by this user.
     /// </summary>
-    public ICollection<WorkItem> ModifiedWorkItems { get; set; } = new List<WorkItem>();
+    public ICollection<Node> ModifiedNodes { get; set; } = new List<Node>();
 }

@@ -114,14 +114,14 @@ public static class EndpointExtensions
         return app;
     }
 
-    public static WebApplication MapWorkItemEndpoints(this WebApplication app)
+    public static WebApplication MapNodeEndpoints(this WebApplication app)
     {
-        var workItems = app.MapGroup("/api/work-items").RequireAuthorization();
+        var nodes = app.MapGroup("/api/nodes").RequireAuthorization();
 
-        // GET /api/work-items - List work items with pagination and filters
-        workItems.MapGet("/", async (
+        // GET /api/nodes - List nodes with pagination and filters
+        nodes.MapGet("/", async (
             HttpContext context,
-            IWorkItemService workItemService,
+            INodeService nodeService,
             int page = 1,
             int pageSize = 20,
             string? type = null,
@@ -134,69 +134,69 @@ public static class EndpointExtensions
                 parentGuid = parsedParentId;
             }
 
-            var (items, totalCount) = await workItemService.GetPagedAsync(
+            var (items, totalCount) = await nodeService.GetPagedAsync(
                 page, pageSize, type, parentGuid, search);
 
-            var responses = items.Select(wi => new WorkItemResponse(
-                wi.Id,
-                wi.TenantId,
-                wi.ParentId,
-                wi.Type,
-                wi.Subtype,
-                wi.Name,
-                string.IsNullOrEmpty(wi.Meta)
+            var responses = items.Select(n => new NodeResponse(
+                n.Id,
+                n.TenantId,
+                n.ParentId,
+                n.Type,
+                n.Subtype,
+                n.Name,
+                string.IsNullOrEmpty(n.Meta)
                     ? null
-                    : JsonSerializer.Deserialize<Dictionary<string, object>>(wi.Meta),
-                wi.CreatedAt,
-                wi.CreatedById,
-                wi.CreatedBy?.FullName,
-                wi.ModifiedAt,
-                wi.ModifiedById,
-                wi.ModifiedBy?.FullName
+                    : JsonSerializer.Deserialize<Dictionary<string, object>>(n.Meta),
+                n.CreatedAt,
+                n.CreatedById,
+                n.CreatedBy?.FullName,
+                n.ModifiedAt,
+                n.ModifiedById,
+                n.ModifiedBy?.FullName
             )).ToList();
 
-            var response = new WorkItemListResponse(responses, totalCount, page, pageSize);
+            var response = new NodeListResponse(responses, totalCount, page, pageSize);
             return Results.Ok(response);
         });
 
-        // GET /api/work-items/{id} - Get single work item
-        workItems.MapGet("/{id:guid}", async (
+        // GET /api/nodes/{id} - Get single node
+        nodes.MapGet("/{id:guid}", async (
             Guid id,
-            IWorkItemService workItemService) =>
+            INodeService nodeService) =>
         {
-            var workItem = await workItemService.GetByIdAsync(id);
-            if (workItem == null)
+            var node = await nodeService.GetByIdAsync(id);
+            if (node == null)
             {
                 return Results.NotFound();
             }
 
-            var response = new WorkItemResponse(
-                workItem.Id,
-                workItem.TenantId,
-                workItem.ParentId,
-                workItem.Type,
-                workItem.Subtype,
-                workItem.Name,
-                string.IsNullOrEmpty(workItem.Meta)
+            var response = new NodeResponse(
+                node.Id,
+                node.TenantId,
+                node.ParentId,
+                node.Type,
+                node.Subtype,
+                node.Name,
+                string.IsNullOrEmpty(node.Meta)
                     ? null
-                    : JsonSerializer.Deserialize<Dictionary<string, object>>(workItem.Meta),
-                workItem.CreatedAt,
-                workItem.CreatedById,
-                workItem.CreatedBy?.FullName,
-                workItem.ModifiedAt,
-                workItem.ModifiedById,
-                workItem.ModifiedBy?.FullName
+                    : JsonSerializer.Deserialize<Dictionary<string, object>>(node.Meta),
+                node.CreatedAt,
+                node.CreatedById,
+                node.CreatedBy?.FullName,
+                node.ModifiedAt,
+                node.ModifiedById,
+                node.ModifiedBy?.FullName
             );
 
             return Results.Ok(response);
         });
 
-        // POST /api/work-items - Create new work item
-        workItems.MapPost("/", async (
-            CreateWorkItemRequest request,
-            IWorkItemService workItemService) =>
+        // POST /api/nodes - Create new node
+        nodes.MapPost("/", async (
+            CreateNodeRequest request,
+            INodeService nodeService) =>
         {
-            var workItem = new WorkItem
+            var node = new Node
             {
                 Type = request.Type,
                 Subtype = request.Subtype,
@@ -207,9 +207,9 @@ public static class EndpointExtensions
                     : null
             };
 
-            var created = await workItemService.CreateAsync(workItem);
+            var created = await nodeService.CreateAsync(node);
 
-            var response = new WorkItemResponse(
+            var response = new NodeResponse(
                 created.Id,
                 created.TenantId,
                 created.ParentId,
@@ -225,16 +225,16 @@ public static class EndpointExtensions
                 created.ModifiedBy?.FullName
             );
 
-            return Results.Created($"/api/work-items/{created.Id}", response);
+            return Results.Created($"/api/nodes/{created.Id}", response);
         });
 
-        // PUT /api/work-items/{id} - Update work item
-        workItems.MapPut("/{id:guid}", async (
+        // PUT /api/nodes/{id} - Update node
+        nodes.MapPut("/{id:guid}", async (
             Guid id,
-            UpdateWorkItemRequest request,
-            IWorkItemService workItemService) =>
+            UpdateNodeRequest request,
+            INodeService nodeService) =>
         {
-            var workItem = new WorkItem
+            var node = new Node
             {
                 Type = request.Type,
                 Subtype = request.Subtype,
@@ -245,13 +245,13 @@ public static class EndpointExtensions
                     : null
             };
 
-            var updated = await workItemService.UpdateAsync(id, workItem);
+            var updated = await nodeService.UpdateAsync(id, node);
             if (updated == null)
             {
                 return Results.NotFound();
             }
 
-            var response = new WorkItemResponse(
+            var response = new NodeResponse(
                 updated.Id,
                 updated.TenantId,
                 updated.ParentId,
@@ -272,12 +272,12 @@ public static class EndpointExtensions
             return Results.Ok(response);
         });
 
-        // DELETE /api/work-items/{id} - Delete work item
-        workItems.MapDelete("/{id:guid}", async (
+        // DELETE /api/nodes/{id} - Delete node
+        nodes.MapDelete("/{id:guid}", async (
             Guid id,
-            IWorkItemService workItemService) =>
+            INodeService nodeService) =>
         {
-            var deleted = await workItemService.DeleteAsync(id);
+            var deleted = await nodeService.DeleteAsync(id);
             if (!deleted)
             {
                 return Results.NotFound();
@@ -286,29 +286,29 @@ public static class EndpointExtensions
             return Results.NoContent();
         });
 
-        // GET /api/work-items/{id}/children - Get children of work item
-        workItems.MapGet("/{id:guid}/children", async (
+        // GET /api/nodes/{id}/children - Get children of node
+        nodes.MapGet("/{id:guid}/children", async (
             Guid id,
-            IWorkItemService workItemService) =>
+            INodeService nodeService) =>
         {
-            var children = await workItemService.GetChildrenAsync(id);
+            var children = await nodeService.GetChildrenAsync(id);
 
-            var responses = children.Select(wi => new WorkItemResponse(
-                wi.Id,
-                wi.TenantId,
-                wi.ParentId,
-                wi.Type,
-                wi.Subtype,
-                wi.Name,
-                string.IsNullOrEmpty(wi.Meta)
+            var responses = children.Select(n => new NodeResponse(
+                n.Id,
+                n.TenantId,
+                n.ParentId,
+                n.Type,
+                n.Subtype,
+                n.Name,
+                string.IsNullOrEmpty(n.Meta)
                     ? null
-                    : JsonSerializer.Deserialize<Dictionary<string, object>>(wi.Meta),
-                wi.CreatedAt,
-                wi.CreatedById,
-                wi.CreatedBy?.FullName,
-                wi.ModifiedAt,
-                wi.ModifiedById,
-                wi.ModifiedBy?.FullName
+                    : JsonSerializer.Deserialize<Dictionary<string, object>>(n.Meta),
+                n.CreatedAt,
+                n.CreatedById,
+                n.CreatedBy?.FullName,
+                n.ModifiedAt,
+                n.ModifiedById,
+                n.ModifiedBy?.FullName
             )).ToList();
 
             return Results.Ok(responses);

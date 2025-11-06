@@ -53,9 +53,9 @@ public class Tenant
     public ICollection<TenantUser> TenantUsers { get; set; } = new List<TenantUser>();
 
     /// <summary>
-    /// Work items belonging to this tenant.
+    /// Nodes belonging to this tenant.
     /// </summary>
-    public ICollection<WorkItem> WorkItems { get; set; } = new List<WorkItem>();
+    public ICollection<Node> Nodes { get; set; } = new List<Node>();
 
     /// <summary>
     /// Field definitions for this tenant.

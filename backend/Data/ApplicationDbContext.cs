@@ -27,7 +27,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Tenant> Tenants { get; set; }
     public DbSet<TenantUser> TenantUsers { get; set; }
-    public DbSet<WorkItem> WorkItems { get; set; }
+    public DbSet<Node> Nodes { get; set; }
     public DbSet<FieldDefinition> FieldDefinitions { get; set; }
 
     /// <summary>
@@ -96,8 +96,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.UserId);
         });
 
-        // Configure WorkItem entity
-        builder.Entity<WorkItem>(entity =>
+        // Configure Node entity
+        builder.Entity<Node>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Type).IsRequired().HasMaxLength(100);
@@ -106,7 +106,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
             // Configure relationship with Tenant
             entity.HasOne(e => e.Tenant)
-                .WithMany(t => t.WorkItems)
+                .WithMany(t => t.Nodes)
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
 
@@ -118,13 +118,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
             // Configure relationship with creator
             entity.HasOne(e => e.CreatedBy)
-                .WithMany(u => u.CreatedWorkItems)
+                .WithMany(u => u.CreatedNodes)
                 .HasForeignKey(e => e.CreatedById)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Configure relationship with modifier
             entity.HasOne(e => e.ModifiedBy)
-                .WithMany(u => u.ModifiedWorkItems)
+                .WithMany(u => u.ModifiedNodes)
                 .HasForeignKey(e => e.ModifiedById)
                 .OnDelete(DeleteBehavior.Restrict);
 
