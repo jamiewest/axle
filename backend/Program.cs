@@ -1,7 +1,9 @@
 using System.Text;
+using System.Text.Json;
 using Axle.Data;
 using Axle.DTOs;
 using Axle.Extensions;
+using Axle.Middleware;
 using Axle.Models;
 using Axle.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -65,6 +67,11 @@ builder.Services.AddAuthorization();
 // Register custom services
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddSingleton<IUpdateNotifier, UpdateNotifier>();
+builder.Services.AddScoped<IWorkItemService, WorkItemService>();
+builder.Services.AddScoped<IFieldDefinitionService, FieldDefinitionService>();
+
+// Add HttpContextAccessor for tenant context
+builder.Services.AddHttpContextAccessor();
 
 // Register email service (fake for dev, production for prod)
 var useFakeEmail = builder.Configuration.GetValue<bool>("EmailSettings:UseFakeEmailService");
@@ -103,6 +110,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors("AllowFlutterApp");
 app.UseAuthentication();
+app.UseTenantMiddleware(); // Add tenant middleware after authentication
 app.UseAuthorization();
 
 // ==================== Authentication Endpoints ====================
@@ -424,6 +432,13 @@ app.MapPost("/api/trigger-update", async (
 })
 .RequireAuthorization()
 .WithName("TriggerUpdate");
+
+// ==================== Multi-Tenant Custom Fields Endpoints ====================
+
+// Map tenant, work item, and field definition endpoints
+app.MapTenantEndpoints();
+app.MapWorkItemEndpoints();
+app.MapFieldDefinitionEndpoints();
 
 // Ensure database is created
 using (var scope = app.Services.CreateScope())

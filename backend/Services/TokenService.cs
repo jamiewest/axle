@@ -38,6 +38,12 @@ public class TokenService : ITokenService
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
+        // Add current tenant ID if user has selected one
+        if (user.CurrentTenantId.HasValue)
+        {
+            claims.Add(new Claim("tenant_id", user.CurrentTenantId.Value.ToString()));
+        }
+
         // Add roles as claims
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
