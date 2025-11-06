@@ -53,7 +53,8 @@ void main() {
 /// Initialize telemetry service based on environment configuration.
 Future<void> _initializeTelemetry() async {
   final enabled = dotenv.env['TELEMETRY_ENABLED']?.toLowerCase() == 'true';
-  final serviceUrl = dotenv.env['TELEMETRY_SERVICE_URL'] ?? 'http://localhost:5200';
+  final serviceUrl =
+      dotenv.env['TELEMETRY_SERVICE_URL'] ?? 'http://localhost:5200';
 
   if (enabled) {
     final config = TelemetryConfig.development(
@@ -65,9 +66,7 @@ Future<void> _initializeTelemetry() async {
     TelemetryService().setupErrorHandlers();
   } else {
     // Initialize as disabled
-    await TelemetryService().initialize(
-      config: TelemetryConfig.disabled(),
-    );
+    await TelemetryService().initialize(config: TelemetryConfig.disabled());
   }
 }
 

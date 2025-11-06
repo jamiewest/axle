@@ -139,7 +139,11 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// Only use HTTPS redirection in production
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseHttpLogging(); // Enable HTTP request/response logging
 app.UseCors("AllowFlutterApp");
 app.UseAuthentication();

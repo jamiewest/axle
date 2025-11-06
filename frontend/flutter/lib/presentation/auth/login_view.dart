@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:axle/domain/services/sign_in_manager.dart';
 import 'package:go_router/go_router.dart';
+import 'package:axle/core/ui/adaptive_breakpoints.dart';
 
 /// View for user login with email and password.
 class LoginView extends StatefulWidget {
@@ -52,9 +53,8 @@ class _LoginViewState extends State<LoginView> {
           result.message ?? 'Two-factor authentication required',
         );
       } else {
-        final errorMessage = result.formattedErrors ??
-            result.message ??
-            'Sign in failed';
+        final errorMessage =
+            result.formattedErrors ?? result.message ?? 'Sign in failed';
         _showErrorDialog(errorMessage);
       }
     } catch (e) {
@@ -72,9 +72,7 @@ class _LoginViewState extends State<LoginView> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sign In Failed'),
-        content: SingleChildScrollView(
-          child: Text(message),
-        ),
+        content: SingleChildScrollView(child: Text(message)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -89,6 +87,8 @@ class _LoginViewState extends State<LoginView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isCompact = context.isCompactLayout;
+    final maxWidth = context.contentMaxWidth ?? 400;
 
     return Scaffold(
       appBar: AppBar(
@@ -102,9 +102,9 @@ class _LoginViewState extends State<LoginView> {
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: context.adaptivePadding,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
+            constraints: BoxConstraints(maxWidth: maxWidth.clamp(400, 600)),
             child: Form(
               key: _formKey,
               child: Column(
@@ -113,26 +113,30 @@ class _LoginViewState extends State<LoginView> {
                 children: [
                   Icon(
                     Icons.lock_outline,
-                    size: 64,
+                    size: isCompact ? 64 : 80,
                     color: colorScheme.primary,
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: isCompact ? 24 : 32),
                   Text(
                     'Welcome Back',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style:
+                        (isCompact
+                                ? theme.textTheme.headlineMedium
+                                : theme.textTheme.headlineLarge)
+                            ?.copyWith(fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: isCompact ? 8 : 12),
                   Text(
                     'Sign in to continue',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                    style:
+                        (isCompact
+                                ? theme.textTheme.bodyLarge
+                                : theme.textTheme.titleMedium)
+                            ?.copyWith(color: colorScheme.onSurfaceVariant),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: isCompact ? 32 : 40),
                   TextFormField(
                     controller: _emailController,
                     decoration: const InputDecoration(
@@ -202,9 +206,7 @@ class _LoginViewState extends State<LoginView> {
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Text('Sign In'),
                   ),

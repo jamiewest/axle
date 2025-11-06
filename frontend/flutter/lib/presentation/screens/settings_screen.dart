@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:axle/data/services/app_config_service.dart';
 import 'package:axle/data/services/connectivity_service.dart';
+import 'package:axle/core/ui/adaptive_breakpoints.dart';
+import 'package:axle/core/ui/adaptive_scaffold.dart';
 
-/// Settings screen for configuring application settings.
+/// Settings screen for configuring application settings with adaptive layout.
 ///
-/// Allows users to configure the API server URL and view connectivity status.
+/// Adapts to different screen sizes following Material Design 3 principles.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -29,7 +31,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadSettings();
     _connectivityStatus = _connectivityService.currentStatus;
 
-    // Listen for connectivity changes
     _connectivityService.connectivityStream.listen((status) {
       if (mounted) {
         setState(() {
@@ -52,7 +53,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _urlController.text = customUrl ?? '';
     });
 
-    // Check server reachability
     await _checkServerReachability();
   }
 
@@ -79,7 +79,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Server URL saved. Restart the app for changes to take effect.'),
+            content: Text(
+              'Server URL saved. Restart the app for changes to take effect.',
+            ),
             duration: Duration(seconds: 4),
           ),
         );
@@ -97,7 +99,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Reset to default. Restart the app for changes to take effect.'),
+          content: Text(
+            'Reset to default. Restart the app for changes to take effect.',
+          ),
           duration: Duration(seconds: 4),
         ),
       );
@@ -115,7 +119,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final trimmed = value.trim();
 
-    // Check if it's a valid URL format
     if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
       return 'URL must start with http:// or https://';
     }
@@ -135,239 +138,275 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUrl = _configService.getApiUrl();
+    final isCompact = context.isCompactLayout;
+    final isExpandedOrLarger = context.isExpandedOrLarger;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        elevation: 2,
+      appBar: AppBar(title: const Text('Settings'), elevation: 2),
+      body: AdaptiveContainer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            SizedBox(height: context.adaptiveMargin),
+            _buildConnectivityCard(context, isCompact),
+            SizedBox(height: context.adaptiveMargin),
+            _buildCurrentServerCard(context, currentUrl, isCompact),
+            SizedBox(height: context.adaptiveMargin),
+            _buildConfigureServerCard(context, isCompact, isExpandedOrLarger),
+            SizedBox(height: context.adaptiveMargin),
+            _buildOfflineModeCard(context, isCompact),
+            SizedBox(height: context.adaptiveMargin),
+          ],
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          // Connectivity Status Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Connection Status',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(
-                        _connectivityStatus == ConnectivityStatus.connected
-                            ? Icons.wifi
-                            : Icons.wifi_off,
-                        color: _connectivityStatus == ConnectivityStatus.connected
-                            ? Colors.green
-                            : Colors.red,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _connectivityStatus == ConnectivityStatus.connected
-                            ? 'Network Connected'
-                            : _connectivityStatus == ConnectivityStatus.disconnected
-                                ? 'Network Disconnected'
-                                : 'Network Status Unknown',
-                        style: TextStyle(
-                          color: _connectivityStatus == ConnectivityStatus.connected
-                              ? Colors.green
-                              : Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        _serverReachable ? Icons.check_circle : Icons.error,
-                        color: _serverReachable ? Colors.green : Colors.orange,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _isCheckingServer
-                              ? 'Checking server...'
-                              : _serverReachable
-                                  ? 'Server Reachable'
-                                  : 'Server Unreachable',
-                          style: TextStyle(
-                            color: _serverReachable ? Colors.green : Colors.orange,
-                          ),
-                        ),
-                      ),
-                      if (!_isCheckingServer)
-                        IconButton(
-                          icon: const Icon(Icons.refresh),
-                          onPressed: _checkServerReachability,
-                          tooltip: 'Refresh',
-                        ),
-                    ],
-                  ),
-                ],
+    );
+  }
+
+  Widget _buildConnectivityCard(BuildContext context, bool isCompact) {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(isCompact ? 16.0 : 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Connection Status',
+              style: TextStyle(
+                fontSize: isCompact ? 18 : 20,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Current Server URL Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Current Server',
+            SizedBox(height: isCompact ? 12 : 16),
+            Row(
+              children: [
+                Icon(
+                  _connectivityStatus == ConnectivityStatus.connected
+                      ? Icons.wifi
+                      : Icons.wifi_off,
+                  color: _connectivityStatus == ConnectivityStatus.connected
+                      ? Colors.green
+                      : Colors.red,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _connectivityStatus == ConnectivityStatus.connected
+                      ? 'Network Connected'
+                      : _connectivityStatus == ConnectivityStatus.disconnected
+                      ? 'Network Disconnected'
+                      : 'Network Status Unknown',
+                  style: TextStyle(
+                    color: _connectivityStatus == ConnectivityStatus.connected
+                        ? Colors.green
+                        : Colors.red,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  _serverReachable ? Icons.check_circle : Icons.error,
+                  color: _serverReachable ? Colors.green : Colors.orange,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _isCheckingServer
+                        ? 'Checking server...'
+                        : _serverReachable
+                        ? 'Server Reachable'
+                        : 'Server Unreachable',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      color: _serverReachable ? Colors.green : Colors.orange,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(Icons.link, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          currentUrl,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
+                ),
+                if (!_isCheckingServer)
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _checkServerReachability,
+                    tooltip: 'Refresh',
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _isUsingCustomUrl ? 'Using custom URL' : 'Using default URL',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                  ),
-                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentServerCard(
+    BuildContext context,
+    String currentUrl,
+    bool isCompact,
+  ) {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(isCompact ? 16.0 : 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Current Server',
+              style: TextStyle(
+                fontSize: isCompact ? 18 : 20,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
+            SizedBox(height: isCompact ? 12 : 16),
+            Row(
+              children: [
+                Icon(Icons.link, size: isCompact ? 20 : 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    currentUrl,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: isCompact ? 14 : 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _isUsingCustomUrl ? 'Using custom URL' : 'Using default URL',
+              style: TextStyle(
+                fontSize: isCompact ? 12 : 14,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          const SizedBox(height: 24),
-
-          // Configure Server URL Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildConfigureServerCard(
+    BuildContext context,
+    bool isCompact,
+    bool isExpandedOrLarger,
+  ) {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(isCompact ? 16.0 : 24.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Configure Server URL',
+                style: TextStyle(
+                  fontSize: isCompact ? 18 : 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: isCompact ? 12 : 16),
+              Text(
+                'Enter a custom server URL or use the default.',
+                style: TextStyle(fontSize: isCompact ? 14 : 16),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _urlController,
+                decoration: const InputDecoration(
+                  labelText: 'Server URL',
+                  hintText: 'http://localhost:5103',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.dns),
+                ),
+                validator: _validateUrl,
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 16),
+              if (isExpandedOrLarger)
+                Row(
                   children: [
-                    const Text(
-                      'Configure Server URL',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _saveCustomUrl,
+                        icon: const Icon(Icons.save),
+                        label: const Text('Save'),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Enter a custom server URL or use the default.',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _urlController,
-                      decoration: const InputDecoration(
-                        labelText: 'Server URL',
-                        hintText: 'http://localhost:5103',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.dns),
-                      ),
-                      validator: _validateUrl,
-                      keyboardType: TextInputType.url,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _saveCustomUrl,
-                            icon: const Icon(Icons.save),
-                            label: const Text('Save'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _resetToDefault,
-                            icon: const Icon(Icons.restore),
-                            label: const Text('Reset to Default'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Note: You need to restart the app for changes to take effect.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _resetToDefault,
+                        icon: const Icon(Icons.restore),
+                        label: const Text('Reset to Default'),
                       ),
                     ),
                   ],
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _saveCustomUrl,
+                      icon: const Icon(Icons.save),
+                      label: const Text('Save'),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _resetToDefault,
+                      icon: const Icon(Icons.restore),
+                      label: const Text('Reset to Default'),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 8),
+              Text(
+                'Note: You need to restart the app for changes to take effect.',
+                style: TextStyle(
+                  fontSize: isCompact ? 12 : 14,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
-            ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
 
-          const SizedBox(height: 24),
-
-          // Offline Mode Information Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Offline Mode',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+  Widget _buildOfflineModeCard(BuildContext context, bool isCompact) {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(isCompact ? 16.0 : 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: isCompact ? 24 : 28,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Offline Mode',
+                  style: TextStyle(
+                    fontSize: isCompact ? 18 : 20,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'The app can operate in offline mode. When disconnected from the server, '
-                    'authentication features will be unavailable, but you can still access '
-                    'cached data and configure settings.',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-        ],
+            SizedBox(height: isCompact ? 12 : 16),
+            Text(
+              'The app can operate in offline mode. When disconnected from the server, '
+              'authentication features will be unavailable, but you can still access '
+              'cached data and configure settings.',
+              style: TextStyle(fontSize: isCompact ? 14 : 16),
+            ),
+          ],
+        ),
       ),
     );
   }
