@@ -113,7 +113,7 @@ public class NodeService : INodeService
         _context.Nodes.Add(node);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Created node {Id} of type {Type} in tenant {TenantId}",
+        _logger.LogInformation("Node creation completed successfully: {Id} of type {Type} in tenant {TenantId}",
             node.Id, node.Type, node.TenantId);
 
         return node;
@@ -138,7 +138,7 @@ public class NodeService : INodeService
 
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Updated node {Id} in tenant {TenantId}",
+        _logger.LogInformation("Node update completed successfully: {Id} in tenant {TenantId}",
             id, existing.TenantId);
 
         return existing;
@@ -155,7 +155,7 @@ public class NodeService : INodeService
         _context.Nodes.Remove(node);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Deleted node {Id} in tenant {TenantId}",
+        _logger.LogInformation("Node deletion completed successfully: {Id} in tenant {TenantId}",
             id, node.TenantId);
 
         return true;

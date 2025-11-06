@@ -41,7 +41,7 @@ public class UpdateNotifier : IUpdateNotifier
             }
         }
 
-        _logger.LogInformation("Broadcasting update for {DataType} to {SubscriberCount} subscribers",
+        _logger.LogInformation("Broadcasting update for data type {DataType} to {SubscriberCount} subscribers",
             dataType, subscriptions.Count);
 
         // Create a copy to avoid modification during iteration
@@ -55,7 +55,7 @@ public class UpdateNotifier : IUpdateNotifier
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error notifying subscriber {SubscriptionId}", subscription.Id);
+                _logger.LogError(ex, "Failed to notify subscriber {SubscriptionId}, removing subscription", subscription.Id);
 
                 // Remove failed subscription
                 subscriptions.Remove(subscription);
@@ -82,7 +82,7 @@ public class UpdateNotifier : IUpdateNotifier
                 return existing;
             });
 
-        _logger.LogInformation("New subscription {SubscriptionId} for {DataType}", subscription.Id, dataType);
+        _logger.LogInformation("Subscription created successfully: {SubscriptionId} for data type {DataType}", subscription.Id, dataType);
 
         return subscription.Id;
     }
@@ -95,7 +95,7 @@ public class UpdateNotifier : IUpdateNotifier
             if (subscription != null)
             {
                 kvp.Value.Remove(subscription);
-                _logger.LogInformation("Unsubscribed {SubscriptionId}", subscriptionId);
+                _logger.LogInformation("Subscription removed successfully: {SubscriptionId}", subscriptionId);
                 return true;
             }
         }

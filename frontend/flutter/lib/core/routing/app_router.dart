@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:axle/core/logging/app_logger.dart';
 import 'package:axle/domain/services/sign_in_manager.dart';
 import 'package:axle/presentation/auth/confirm_account_view.dart';
 import 'package:axle/presentation/auth/create_account_view.dart';
@@ -9,13 +10,70 @@ import 'package:axle/presentation/auth/reset_password_view.dart';
 import 'package:axle/presentation/home/home_view.dart';
 import 'package:axle/presentation/examples/live_updates_demo.dart';
 
+/// Navigation observer for logging route changes.
+class _NavigationObserver extends NavigatorObserver {
+  _NavigationObserver(this._logger);
+
+  final AppLogger _logger;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    _logNavigation('push', route, previousRoute);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    _logNavigation('pop', route, previousRoute);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    if (newRoute != null) {
+      _logger.logInfo(
+        'Route replaced: ${_getRouteName(oldRoute)} → ${_getRouteName(newRoute)}',
+        attributes: {
+          'navigation_type': 'replace',
+          'old_route': _getRouteName(oldRoute),
+          'new_route': _getRouteName(newRoute),
+        },
+      );
+    }
+  }
+
+  void _logNavigation(String type, Route<dynamic> route, Route<dynamic>? previousRoute) {
+    final routeName = _getRouteName(route);
+    final previousRouteName = _getRouteName(previousRoute);
+
+    _logger.logInfo(
+      'Navigation $type: ${previousRouteName ?? '(none)'} → $routeName',
+      attributes: {
+        'navigation_type': type,
+        'from_route': previousRouteName ?? 'none',
+        'to_route': routeName,
+      },
+    );
+  }
+
+  String? _getRouteName(Route<dynamic>? route) {
+    if (route == null) return null;
+    if (route.settings.name != null) return route.settings.name;
+    return route.toString();
+  }
+}
+
 /// Creates and configures the application router.
 ///
 /// The router handles navigation between authentication views and the main
 /// application content. It uses [SignInManager] for authentication state.
 GoRouter createAppRouter(SignInManager signInManager) {
+  final logger = AppLogger('AppRouter');
+
   return GoRouter(
     initialLocation: '/',
+    observers: [_NavigationObserver(logger)],
     routes: [
       GoRoute(
         path: '/',

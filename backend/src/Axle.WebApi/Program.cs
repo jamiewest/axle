@@ -8,6 +8,7 @@ using Axle.Models;
 using Axle.ServiceDefaults;
 using Axle.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -16,6 +17,23 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add Aspire service defaults (OpenTelemetry, health checks, service discovery)
 builder.AddServiceDefaults();
+
+builder.Services.AddProblemDetails();
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.TimestampFormat = "HH:mm:ss ";
+    options.SingleLine = true;
+});
+
+builder.Logging.AddDebug();
+
+builder.Services.AddHttpLogging(options =>
+{
+    options.LoggingFields = HttpLoggingFields.RequestMethod |
+                            HttpLoggingFields.RequestPath |
+                            HttpLoggingFields.ResponseStatusCode |
+                            HttpLoggingFields.Duration;
+});
 
 // Add services to the container
 builder.Services.AddOpenApi();
@@ -88,6 +106,12 @@ else
 
 // Add gRPC
 builder.Services.AddGrpc();
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddGrpcReflection();
+}
+
+builder.Services.AddGrpcHealthChecks();
 
 // Configure CORS for Flutter app and gRPC
 builder.Services.AddCors(options =>
@@ -126,8 +150,11 @@ app.MapPost("/register", async (
     UserManager<ApplicationUser> userManager,
     IUpdateNotifier notifier,
     IEmailService emailService,
-    ApplicationDbContext context) =>
+    ApplicationDbContext context,
+    ILogger<Program> logger) =>
 {
+    logger.LogInformation("Starting account creation for email: {Email}", request.Email);
+
     var user = new ApplicationUser
     {
         UserName = request.UserName ?? request.Email,
@@ -139,6 +166,9 @@ app.MapPost("/register", async (
 
     if (!result.Succeeded)
     {
+        logger.LogWarning("Account creation failed for {Email}: {Errors}",
+            request.Email,
+            string.Join(", ", result.Errors.Select(e => e.Description)));
         return Results.BadRequest(new { errors = result.Errors.Select(e => e.Description) });
     }
 
@@ -147,6 +177,7 @@ app.MapPost("/register", async (
 
     // Send verification email
     await emailService.SendVerificationEmailAsync(user.Email!, confirmationToken, user.Id);
+    logger.LogInformation("Verification email sent to {Email}", user.Email);
 
     // Notify subscribers about new user (gRPC real-time update)
     var totalUsers = await context.Users.CountAsync();
@@ -154,6 +185,8 @@ app.MapPost("/register", async (
         Axle.Grpc.ChangeType.Created,
         new { totalUsers, newUserId = user.Id, userName = user.UserName }
     );
+
+    logger.LogInformation("Account creation completed successfully for {Email}, userId: {UserId}", user.Email, user.Id);
 
     return Results.Ok(new
     {
@@ -169,11 +202,15 @@ app.MapPost("/login", async (
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
     ITokenService tokenService,
-    ApplicationDbContext context) =>
+    ApplicationDbContext context,
+    ILogger<Program> logger) =>
 {
+    logger.LogInformation("Starting user authentication for email: {Email}", request.Email);
+
     var user = await userManager.FindByEmailAsync(request.Email);
     if (user == null)
     {
+        logger.LogWarning("User authentication failed: user not found for email {Email}", request.Email);
         return Results.Unauthorized();
     }
 
@@ -181,6 +218,7 @@ app.MapPost("/login", async (
 
     if (!result.Succeeded)
     {
+        logger.LogWarning("User authentication failed: invalid password for email {Email}", request.Email);
         return Results.Unauthorized();
     }
 
@@ -194,6 +232,8 @@ app.MapPost("/login", async (
     // Save refresh token to database
     context.RefreshTokens.Add(refreshToken);
     await context.SaveChangesAsync();
+
+    logger.LogInformation("User authentication completed successfully for {Email}, userId: {UserId}", user.Email, user.Id);
 
     var response = new LoginResponse
     {
@@ -212,12 +252,16 @@ app.MapPost("/refresh", async (
     RefreshTokenRequest request,
     ITokenService tokenService,
     UserManager<ApplicationUser> userManager,
-    ApplicationDbContext context) =>
+    ApplicationDbContext context,
+    ILogger<Program> logger) =>
 {
+    logger.LogDebug("Starting token refresh");
+
     var user = await tokenService.ValidateRefreshTokenAsync(request.RefreshToken);
 
     if (user == null)
     {
+        logger.LogWarning("Token refresh failed: invalid refresh token");
         return Results.Unauthorized();
     }
 
@@ -235,6 +279,8 @@ app.MapPost("/refresh", async (
     context.RefreshTokens.Add(newRefreshToken);
     await context.SaveChangesAsync();
 
+    logger.LogInformation("Token refresh completed successfully for userId: {UserId}", user.Id);
+
     var response = new LoginResponse
     {
         AccessToken = accessToken,
@@ -251,11 +297,15 @@ app.MapPost("/refresh", async (
 app.MapGet("/confirmEmail", async (
     string userId,
     string code,
-    UserManager<ApplicationUser> userManager) =>
+    UserManager<ApplicationUser> userManager,
+    ILogger<Program> logger) =>
 {
+    logger.LogInformation("Starting email confirmation for userId: {UserId}", userId);
+
     var user = await userManager.FindByIdAsync(userId);
     if (user == null)
     {
+        logger.LogWarning("Email confirmation failed: invalid user ID {UserId}", userId);
         return Results.BadRequest(new { error = "Invalid user ID" });
     }
 
@@ -263,8 +313,13 @@ app.MapGet("/confirmEmail", async (
 
     if (!result.Succeeded)
     {
+        logger.LogWarning("Email confirmation failed for {Email}: {Errors}",
+            user.Email,
+            string.Join(", ", result.Errors.Select(e => e.Description)));
         return Results.BadRequest(new { errors = result.Errors.Select(e => e.Description) });
     }
+
+    logger.LogInformation("Email confirmation completed successfully for {Email}", user.Email);
 
     return Results.Ok(new { message = "Email confirmed successfully" });
 })
@@ -274,17 +329,22 @@ app.MapGet("/confirmEmail", async (
 app.MapPost("/resendConfirmationEmail", async (
     ResendConfirmationRequest request,
     UserManager<ApplicationUser> userManager,
-    IEmailService emailService) =>
+    IEmailService emailService,
+    ILogger<Program> logger) =>
 {
+    logger.LogInformation("Starting confirmation email resend for email: {Email}", request.Email);
+
     var user = await userManager.FindByEmailAsync(request.Email);
     if (user == null)
     {
+        logger.LogDebug("Confirmation email resend requested for non-existent email: {Email}", request.Email);
         // Don't reveal that the user doesn't exist
         return Results.Ok(new { message = "If the email exists, a confirmation link has been sent" });
     }
 
     if (await userManager.IsEmailConfirmedAsync(user))
     {
+        logger.LogWarning("Confirmation email resend failed: email already confirmed for {Email}", request.Email);
         return Results.BadRequest(new { error = "Email is already confirmed" });
     }
 
@@ -292,6 +352,8 @@ app.MapPost("/resendConfirmationEmail", async (
 
     // Send verification email
     await emailService.SendVerificationEmailAsync(user.Email!, confirmationToken, user.Id);
+
+    logger.LogInformation("Confirmation email resend completed successfully for {Email}", user.Email);
 
     return Results.Ok(new
     {
@@ -304,13 +366,17 @@ app.MapPost("/resendConfirmationEmail", async (
 app.MapPost("/forgotPassword", async (
     ForgotPasswordRequest request,
     UserManager<ApplicationUser> userManager,
-    IEmailService emailService) =>
+    IEmailService emailService,
+    ILogger<Program> logger) =>
 {
+    logger.LogInformation("Starting password reset email send for email: {Email}", request.Email);
+
     var user = await userManager.FindByEmailAsync(request.Email);
 
     // Don't reveal whether a user exists or not
     if (user == null)
     {
+        logger.LogDebug("Password reset email requested for non-existent email: {Email}", request.Email);
         return Results.Ok(new { message = "If the email exists, a password reset link has been sent" });
     }
 
@@ -318,6 +384,8 @@ app.MapPost("/forgotPassword", async (
 
     // Send password reset email
     await emailService.SendPasswordResetEmailAsync(user.Email!, resetToken, user.Id);
+
+    logger.LogInformation("Password reset email sent successfully for {Email}", user.Email);
 
     return Results.Ok(new
     {
@@ -329,11 +397,15 @@ app.MapPost("/forgotPassword", async (
 // POST /resetPassword
 app.MapPost("/resetPassword", async (
     ResetPasswordRequest request,
-    UserManager<ApplicationUser> userManager) =>
+    UserManager<ApplicationUser> userManager,
+    ILogger<Program> logger) =>
 {
+    logger.LogInformation("Starting password reset for email: {Email}", request.Email);
+
     var user = await userManager.FindByEmailAsync(request.Email);
     if (user == null)
     {
+        logger.LogWarning("Password reset failed: user not found for email {Email}", request.Email);
         return Results.BadRequest(new { error = "Invalid request" });
     }
 
@@ -341,8 +413,13 @@ app.MapPost("/resetPassword", async (
 
     if (!result.Succeeded)
     {
+        logger.LogWarning("Password reset failed for {Email}: {Errors}",
+            request.Email,
+            string.Join(", ", result.Errors.Select(e => e.Description)));
         return Results.BadRequest(new { errors = result.Errors.Select(e => e.Description) });
     }
+
+    logger.LogInformation("Password reset completed successfully for {Email}", user.Email);
 
     return Results.Ok(new { message = "Password reset successfully" });
 })

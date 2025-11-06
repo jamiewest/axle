@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
 import 'package:axle/core/config/api_config.dart';
+import 'package:axle/core/logging/app_logger.dart';
 import 'package:axle/data/models/confirm_email_request.dart';
 import 'package:axle/data/models/forgot_password_request.dart';
 import 'package:axle/data/models/login_request.dart';
@@ -29,6 +29,7 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
   final ApiConfig _apiConfig;
   final TokenStorageService _tokenStorage;
   final http.Client _httpClient;
+  final AppLogger _logger = AppLogger('AspNetCoreIdentity');
 
   String? _cachedUserId;
 
@@ -62,7 +63,7 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
         final userId = await _fetchUserId();
         _cachedUserId = userId;
 
-        developer.log('Sign in successful', name: 'AspNetCoreIdentity');
+        _logger.logOperationSuccess('User authentication', attributes: {'userId': userId});
         return AuthResult.success(userId: userId);
       } else if (response.statusCode == 401) {
         return AuthResult.failure('Invalid email or password');
@@ -74,11 +75,11 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
         );
       }
     } catch (e, stackTrace) {
-      developer.log(
-        'Sign in error',
-        name: 'AspNetCoreIdentity',
+      _logger.logOperationFailure(
+        'User authentication',
         error: e,
         stackTrace: stackTrace,
+        attributes: {'error_type': 'network_error'},
       );
       return AuthResult.failure('Network error: ${e.toString()}');
     }
@@ -86,9 +87,10 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
 
   @override
   Future<void> signOut() async {
+    _logger.logOperationStart('User sign out');
     await _tokenStorage.clearTokens();
     _cachedUserId = null;
-    developer.log('Sign out successful', name: 'AspNetCoreIdentity');
+    _logger.logOperationSuccess('User sign out');
   }
 
   @override
@@ -110,11 +112,11 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        developer.log('Account created', name: 'AspNetCoreIdentity');
-
         // Extract userId from response
         final responseBody = jsonDecode(response.body) as Map<String, dynamic>;
         final userId = responseBody['userId'] as String?;
+
+        _logger.logOperationSuccess('Account creation', attributes: {'userId': userId});
 
         return AuthResult.success(
           message: 'Account created. Please check your email to confirm.',
@@ -128,11 +130,11 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
         );
       }
     } catch (e, stackTrace) {
-      developer.log(
-        'Create account error',
-        name: 'AspNetCoreIdentity',
+      _logger.logOperationFailure(
+        'Account creation',
         error: e,
         stackTrace: stackTrace,
+        attributes: {'error_type': 'network_error'},
       );
       return AuthResult.failure('Network error: ${e.toString()}');
     }
@@ -150,7 +152,7 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        developer.log('Password reset email sent', name: 'AspNetCoreIdentity');
+        _logger.logOperationSuccess('Password reset email sent', attributes: {'email': email});
         return AuthResult.success(
           message: 'If the email exists, a reset code has been sent.',
         );
@@ -162,11 +164,11 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
         );
       }
     } catch (e, stackTrace) {
-      developer.log(
-        'Send password reset error',
-        name: 'AspNetCoreIdentity',
+      _logger.logOperationFailure(
+        'Password reset email send',
         error: e,
         stackTrace: stackTrace,
+        attributes: {'error_type': 'network_error'},
       );
       return AuthResult.failure('Network error: ${e.toString()}');
     }
@@ -191,7 +193,7 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        developer.log('Password reset successful', name: 'AspNetCoreIdentity');
+        _logger.logOperationSuccess('Password reset', attributes: {'email': email});
         return AuthResult.success(message: 'Password successfully reset');
       } else {
         final errorData = _parseErrorResponse(response);
@@ -201,11 +203,11 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
         );
       }
     } catch (e, stackTrace) {
-      developer.log(
-        'Reset password error',
-        name: 'AspNetCoreIdentity',
+      _logger.logOperationFailure(
+        'Password reset',
         error: e,
         stackTrace: stackTrace,
+        attributes: {'error_type': 'network_error'},
       );
       return AuthResult.failure('Network error: ${e.toString()}');
     }
@@ -229,7 +231,7 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        developer.log('Account confirmed', name: 'AspNetCoreIdentity');
+        _logger.logOperationSuccess('Email confirmation', attributes: {'email': email});
         return AuthResult.success(message: 'Account successfully confirmed');
       } else {
         final errorData = _parseErrorResponse(response);
@@ -239,11 +241,11 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
         );
       }
     } catch (e, stackTrace) {
-      developer.log(
-        'Confirm account error',
-        name: 'AspNetCoreIdentity',
+      _logger.logOperationFailure(
+        'Email confirmation',
         error: e,
         stackTrace: stackTrace,
+        attributes: {'error_type': 'network_error'},
       );
       return AuthResult.failure('Network error: ${e.toString()}');
     }
@@ -261,10 +263,7 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        developer.log(
-          'Confirmation email resent',
-          name: 'AspNetCoreIdentity',
-        );
+        _logger.logOperationSuccess('Confirmation email resent', attributes: {'email': email});
         return AuthResult.success(
           message: 'Verification code resent. Check your email.',
         );
@@ -276,11 +275,11 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
         );
       }
     } catch (e, stackTrace) {
-      developer.log(
-        'Resend confirmation error',
-        name: 'AspNetCoreIdentity',
+      _logger.logOperationFailure(
+        'Confirmation email resend',
         error: e,
         stackTrace: stackTrace,
+        attributes: {'error_type': 'network_error'},
       );
       return AuthResult.failure('Network error: ${e.toString()}');
     }
@@ -298,18 +297,15 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final code = data['verificationCode'] as String?;
-        developer.log(
-          'Dev verification code retrieved',
-          name: 'AspNetCoreIdentity',
-        );
+        _logger.logDebug('Dev verification code retrieved', attributes: {'email': email});
         return code;
       }
     } catch (e, stackTrace) {
-      developer.log(
-        'Failed to get dev verification code',
-        name: 'AspNetCoreIdentity',
+      _logger.logError(
+        'Failed to retrieve dev verification code',
         error: e,
         stackTrace: stackTrace,
+        attributes: {'email': email},
       );
     }
     return null;
@@ -357,7 +353,7 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
         return userId;
       }
     } catch (e) {
-      developer.log('Failed to fetch user ID', name: 'AspNetCoreIdentity');
+      _logger.logWarning('Failed to fetch user ID from API, using cached value', attributes: {'error': e.toString()});
     }
     return _tokenStorage.getUserId();
   }
@@ -389,11 +385,11 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
           userId: userId,
         );
 
-        developer.log('Token refreshed', name: 'AspNetCoreIdentity');
+        _logger.logOperationSuccess('Token refresh');
         return true;
       }
     } catch (e) {
-      developer.log('Token refresh failed', name: 'AspNetCoreIdentity');
+      _logger.logWarning('Token refresh failed, clearing tokens', attributes: {'error': e.toString()});
     }
 
     await _tokenStorage.clearTokens();
@@ -485,7 +481,7 @@ class AspNetCoreIdentitySignInManager implements SignInManager {
         return {'message': body['message'] as String};
       }
     } catch (e) {
-      developer.log('Error parsing response', name: 'AspNetCoreIdentity');
+      _logger.logWarning('Error parsing API error response', attributes: {'error': e.toString(), 'statusCode': response.statusCode});
     }
 
     return {'message': 'An error occurred (${response.statusCode})'};

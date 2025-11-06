@@ -31,7 +31,7 @@ public class TenantMiddleware
                 if (Guid.TryParse(tenantIdHeader.ToString(), out var parsedTenantId))
                 {
                     tenantId = parsedTenantId;
-                    _logger.LogDebug("Tenant ID extracted from X-Tenant-Id header: {TenantId}", tenantId);
+                    _logger.LogDebug("Extracted tenant ID from X-Tenant-Id header: {TenantId}", tenantId);
                 }
             }
 
@@ -42,7 +42,7 @@ public class TenantMiddleware
                 if (tenantClaim != null && Guid.TryParse(tenantClaim.Value, out var claimTenantId))
                 {
                     tenantId = claimTenantId;
-                    _logger.LogDebug("Tenant ID extracted from JWT claim: {TenantId}", tenantId);
+                    _logger.LogDebug("Extracted tenant ID from JWT claim: {TenantId}", tenantId);
                 }
             }
 
@@ -65,7 +65,7 @@ public class TenantMiddleware
                     if (tenant != null)
                     {
                         tenantId = tenant.Id;
-                        _logger.LogDebug("Tenant ID extracted from subdomain '{Subdomain}': {TenantId}", subdomain, tenantId);
+                        _logger.LogDebug("Extracted tenant ID from subdomain '{Subdomain}': {TenantId}", subdomain, tenantId);
                     }
                 }
             }
@@ -76,7 +76,7 @@ public class TenantMiddleware
                 if (Guid.TryParse(routeTenantId?.ToString(), out var parsedRouteTenantId))
                 {
                     tenantId = parsedRouteTenantId;
-                    _logger.LogDebug("Tenant ID extracted from route parameter: {TenantId}", tenantId);
+                    _logger.LogDebug("Extracted tenant ID from route parameter: {TenantId}", tenantId);
                 }
             }
 
@@ -89,7 +89,7 @@ public class TenantMiddleware
 
                 if (!tenantExists)
                 {
-                    _logger.LogWarning("Tenant {TenantId} not found or inactive", tenantId);
+                    _logger.LogWarning("Tenant validation failed: tenant {TenantId} not found or inactive", tenantId);
                     tenantId = null; // Reset invalid tenant
                 }
             }
@@ -98,16 +98,16 @@ public class TenantMiddleware
             if (tenantId.HasValue)
             {
                 context.Items["TenantId"] = tenantId.Value;
-                _logger.LogInformation("Tenant context set: {TenantId}", tenantId.Value);
+                _logger.LogInformation("Tenant context set successfully: {TenantId} for path {Path}", tenantId.Value, context.Request.Path);
             }
             else
             {
-                _logger.LogDebug("No tenant context available for request {Path}", context.Request.Path);
+                _logger.LogDebug("No tenant context available for request path {Path}", context.Request.Path);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error extracting tenant context");
+            _logger.LogError(ex, "Tenant context extraction failed, continuing without tenant context");
             // Continue without tenant context rather than failing the request
         }
 

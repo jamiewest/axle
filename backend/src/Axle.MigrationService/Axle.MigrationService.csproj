@@ -4,6 +4,8 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Make build happy with generated migrations -->
+    <NoWarn>$(NoWarn);IDE0161;IDE0005</NoWarn>
     <UserSecretsId>dotnet-Axle.MigrationService-f920722f-5ad9-42e4-a0a0-17fd91963d86</UserSecretsId>
   </PropertyGroup>
 

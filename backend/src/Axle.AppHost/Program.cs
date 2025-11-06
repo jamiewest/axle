@@ -7,7 +7,7 @@ var migrations = builder.AddProject<Projects.Axle_MigrationService>("migrations"
     .WithReference(database);
 
 // Add backend API project - waits for migrations to complete before starting
-var backend = builder.AddProject<Projects.Axle>("backend")
+var backend = builder.AddProject<Projects.Axle>("webapi")
     .WithReference(database)
     .WaitForCompletion(migrations);
 
