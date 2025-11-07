@@ -26,24 +26,40 @@ class ConnectivityService {
 
   /// Initialize the connectivity service.
   Future<void> initialize() async {
-    // Check initial connectivity
-    await checkConnectivity();
-
-    // Listen for connectivity changes
+    // Set up the stream listener first
     _subscription = _connectivity.onConnectivityChanged.listen(
       (List<ConnectivityResult> results) async {
         await checkConnectivity();
       },
     );
+
+    // Start initial connectivity check in background - don't await it
+    // This prevents blocking if the check takes too long on some platforms
+    checkConnectivity().timeout(
+      const Duration(seconds: 2),
+      onTimeout: () {
+        // If timeout, assume connected
+        _updateStatus(ConnectivityStatus.connected);
+      },
+    ).catchError((_) {
+      // Ignore errors during initial check
+    });
   }
 
   /// Check current connectivity and update status.
   Future<void> checkConnectivity() async {
-    final results = await _connectivity.checkConnectivity();
+    try {
+      final results = await _connectivity.checkConnectivity().timeout(
+        const Duration(seconds: 2),
+      );
 
-    if (results.contains(ConnectivityResult.none)) {
-      _updateStatus(ConnectivityStatus.disconnected);
-    } else {
+      if (results.contains(ConnectivityResult.none)) {
+        _updateStatus(ConnectivityStatus.disconnected);
+      } else {
+        _updateStatus(ConnectivityStatus.connected);
+      }
+    } catch (e) {
+      // If check fails, assume connected
       _updateStatus(ConnectivityStatus.connected);
     }
   }
