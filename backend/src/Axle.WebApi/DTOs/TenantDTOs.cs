@@ -8,6 +8,7 @@ public record CreateTenantRequest(
 
 public record UpdateTenantRequest(
     string Name,
+    string Slug,
     bool IsActive,
     string? Settings = null
 );

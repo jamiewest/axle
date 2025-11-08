@@ -76,15 +76,21 @@ class HomeView extends StatelessWidget {
               SizedBox(height: isCompact ? 48 : 64),
               // Use different layout for compact vs expanded
               if (isExpandedOrLarger)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 16,
+                  runSpacing: 16,
                   children: [
+                    FilledButton.icon(
+                      onPressed: () => context.push('/tenants'),
+                      icon: const Icon(Icons.business),
+                      label: const Text('My Tenants'),
+                    ),
                     FilledButton.icon(
                       onPressed: () => context.push('/grpc-demo'),
                       icon: const Icon(Icons.stream),
                       label: const Text('gRPC Live Updates Demo'),
                     ),
-                    const SizedBox(width: 16),
                     OutlinedButton.icon(
                       onPressed: () => context.push('/settings'),
                       icon: const Icon(Icons.settings),
@@ -95,6 +101,12 @@ class HomeView extends StatelessWidget {
               else
                 Column(
                   children: [
+                    FilledButton.icon(
+                      onPressed: () => context.push('/tenants'),
+                      icon: const Icon(Icons.business),
+                      label: const Text('My Tenants'),
+                    ),
+                    const SizedBox(height: 16),
                     FilledButton.icon(
                       onPressed: () => context.push('/grpc-demo'),
                       icon: const Icon(Icons.stream),

@@ -5,6 +5,7 @@ namespace Axle.DTOs;
 public record CreateNodeRequest(
     string Type,
     string Name,
+    Guid? WorkspaceId = null,
     string? Subtype = null,
     Guid? ParentId = null,
     Dictionary<string, object>? Meta = null
@@ -21,6 +22,7 @@ public record UpdateNodeRequest(
 public record NodeResponse(
     Guid Id,
     Guid TenantId,
+    Guid? WorkspaceId,
     Guid? ParentId,
     string Type,
     string? Subtype,

@@ -1,6 +1,6 @@
 ﻿var builder = DistributedApplication.CreateBuilder(args);
 
-var database = builder.AddSqlite("sqlite");
+var database = builder.AddSqlite("sqlite").WithSqliteWeb();
 
 // Add migration service - runs migrations at startup
 var migrations = builder.AddProject<Projects.Axle_MigrationService>("migrations")

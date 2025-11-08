@@ -24,6 +24,16 @@ public class Node
     public Tenant Tenant { get; set; } = null!;
 
     /// <summary>
+    /// Workspace this node belongs to.
+    /// </summary>
+    public Guid? WorkspaceId { get; set; }
+
+    /// <summary>
+    /// Navigation property to workspace.
+    /// </summary>
+    public Workspace? Workspace { get; set; }
+
+    /// <summary>
     /// Parent node ID for hierarchical structures (null for root items).
     /// </summary>
     public Guid? ParentId { get; set; }

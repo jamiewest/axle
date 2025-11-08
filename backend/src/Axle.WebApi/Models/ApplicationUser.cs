@@ -34,6 +34,16 @@ public class ApplicationUser : IdentityUser
     public ICollection<TenantUser> TenantMemberships { get; set; } = new List<TenantUser>();
 
     /// <summary>
+    /// Workspaces created by this user.
+    /// </summary>
+    public ICollection<Workspace> CreatedWorkspaces { get; set; } = new List<Workspace>();
+
+    /// <summary>
+    /// Workspaces last modified by this user.
+    /// </summary>
+    public ICollection<Workspace> ModifiedWorkspaces { get; set; } = new List<Workspace>();
+
+    /// <summary>
     /// Nodes created by this user.
     /// </summary>
     public ICollection<Node> CreatedNodes { get; set; } = new List<Node>();

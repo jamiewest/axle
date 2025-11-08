@@ -3,6 +3,7 @@ using System;
 using Axle.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Axle.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251108163439_RemoveNetPrefix")]
+    partial class RemoveNetPrefix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.4");
@@ -194,9 +197,6 @@ namespace Axle.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("WorkspaceId")
-                        .HasColumnType("TEXT");
-
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedById");
@@ -205,13 +205,9 @@ namespace Axle.Migrations
 
                     b.HasIndex("ParentId");
 
-                    b.HasIndex("WorkspaceId");
-
                     b.HasIndex("TenantId", "CreatedAt");
 
                     b.HasIndex("TenantId", "Type");
-
-                    b.HasIndex("TenantId", "WorkspaceId");
 
                     b.ToTable("Nodes");
                 });
@@ -321,55 +317,6 @@ namespace Axle.Migrations
                         .IsUnique();
 
                     b.ToTable("TenantUsers");
-                });
-
-            modelBuilder.Entity("Axle.Models.Workspace", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CreatedById")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("UpdatedById")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedById");
-
-                    b.HasIndex("IsActive");
-
-                    b.HasIndex("TenantId");
-
-                    b.HasIndex("UpdatedById");
-
-                    b.HasIndex("TenantId", "IsActive");
-
-                    b.ToTable("Workspaces");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -535,11 +482,6 @@ namespace Axle.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Axle.Models.Workspace", "Workspace")
-                        .WithMany("Nodes")
-                        .HasForeignKey("WorkspaceId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("CreatedBy");
 
                     b.Navigation("ModifiedBy");
@@ -547,8 +489,6 @@ namespace Axle.Migrations
                     b.Navigation("Parent");
 
                     b.Navigation("Tenant");
-
-                    b.Navigation("Workspace");
                 });
 
             modelBuilder.Entity("Axle.Models.RefreshToken", b =>
@@ -579,32 +519,6 @@ namespace Axle.Migrations
                     b.Navigation("Tenant");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Axle.Models.Workspace", b =>
-                {
-                    b.HasOne("Axle.Models.ApplicationUser", "CreatedBy")
-                        .WithMany("CreatedWorkspaces")
-                        .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Axle.Models.Tenant", "Tenant")
-                        .WithMany("Workspaces")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Axle.Models.ApplicationUser", "UpdatedBy")
-                        .WithMany("ModifiedWorkspaces")
-                        .HasForeignKey("UpdatedById")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("CreatedBy");
-
-                    b.Navigation("Tenant");
-
-                    b.Navigation("UpdatedBy");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -662,11 +576,7 @@ namespace Axle.Migrations
                 {
                     b.Navigation("CreatedNodes");
 
-                    b.Navigation("CreatedWorkspaces");
-
                     b.Navigation("ModifiedNodes");
-
-                    b.Navigation("ModifiedWorkspaces");
 
                     b.Navigation("RefreshTokens");
 
@@ -685,13 +595,6 @@ namespace Axle.Migrations
                     b.Navigation("Nodes");
 
                     b.Navigation("TenantUsers");
-
-                    b.Navigation("Workspaces");
-                });
-
-            modelBuilder.Entity("Axle.Models.Workspace", b =>
-                {
-                    b.Navigation("Nodes");
                 });
 #pragma warning restore 612, 618
         }

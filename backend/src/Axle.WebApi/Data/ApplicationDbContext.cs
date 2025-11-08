@@ -21,6 +21,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Tenant> Tenants { get; set; }
     public DbSet<TenantUser> TenantUsers { get; set; }
+    public DbSet<Workspace> Workspaces { get; set; }
     public DbSet<Node> Nodes { get; set; }
     public DbSet<FieldDefinition> FieldDefinitions { get; set; }
 
@@ -33,6 +34,36 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        // Configure Identity table names without prefix
+        builder.Entity<ApplicationUser>(entity =>
+        {
+            entity.ToTable("Users");
+        });
+        builder.Entity<Microsoft.AspNetCore.Identity.IdentityRole>(entity =>
+        {
+            entity.ToTable("Roles");
+        });
+        builder.Entity<Microsoft.AspNetCore.Identity.IdentityUserRole<string>>(entity =>
+        {
+            entity.ToTable("UserRoles");
+        });
+        builder.Entity<Microsoft.AspNetCore.Identity.IdentityUserClaim<string>>(entity =>
+        {
+            entity.ToTable("UserClaims");
+        });
+        builder.Entity<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>(entity =>
+        {
+            entity.ToTable("UserLogins");
+        });
+        builder.Entity<Microsoft.AspNetCore.Identity.IdentityUserToken<string>>(entity =>
+        {
+            entity.ToTable("UserTokens");
+        });
+        builder.Entity<Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>>(entity =>
+        {
+            entity.ToTable("RoleClaims");
+        });
 
         // Configure RefreshToken entity
         builder.Entity<RefreshToken>(entity =>
@@ -90,6 +121,41 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.UserId);
         });
 
+        // Configure Workspace entity
+        builder.Entity<Workspace>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.IsActive).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.CreatedById).IsRequired();
+
+            // Configure relationship with Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany(t => t.Workspaces)
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure relationship with creator
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany(u => u.CreatedWorkspaces)
+                .HasForeignKey(e => e.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure relationship with modifier
+            entity.HasOne(e => e.UpdatedBy)
+                .WithMany(u => u.ModifiedWorkspaces)
+                .HasForeignKey(e => e.UpdatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Indexes for common queries
+            entity.HasIndex(e => e.TenantId);
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => new { e.TenantId, e.IsActive });
+            entity.HasIndex(e => e.CreatedById);
+        });
+
         // Configure Node entity
         builder.Entity<Node>(entity =>
         {
@@ -103,6 +169,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .WithMany(t => t.Nodes)
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure relationship with Workspace
+            entity.HasOne(e => e.Workspace)
+                .WithMany(w => w.Nodes)
+                .HasForeignKey(e => e.WorkspaceId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Configure self-referencing hierarchy (parent-child)
             entity.HasOne(e => e.Parent)
@@ -124,6 +196,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
             // Indexes for common queries
             entity.HasIndex(e => new { e.TenantId, e.Type }); // Query by tenant and type
+            entity.HasIndex(e => e.WorkspaceId); // Query by workspace
+            entity.HasIndex(e => new { e.TenantId, e.WorkspaceId }); // Query by tenant and workspace
             entity.HasIndex(e => e.ParentId); // Query children
             entity.HasIndex(e => e.CreatedById); // Query by creator
             entity.HasIndex(e => new { e.TenantId, e.CreatedAt }); // Recent items by tenant

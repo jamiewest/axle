@@ -53,6 +53,11 @@ public class Tenant
     public ICollection<TenantUser> TenantUsers { get; set; } = new List<TenantUser>();
 
     /// <summary>
+    /// Workspaces belonging to this tenant.
+    /// </summary>
+    public ICollection<Workspace> Workspaces { get; set; } = new List<Workspace>();
+
+    /// <summary>
     /// Nodes belonging to this tenant.
     /// </summary>
     public ICollection<Node> Nodes { get; set; } = new List<Node>();

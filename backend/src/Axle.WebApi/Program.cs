@@ -504,8 +504,9 @@ app.MapPost("/api/trigger-update", async (
 
 // ==================== Multi-Tenant Custom Fields Endpoints ====================
 
-// Map tenant, node, and field definition endpoints
+// Map tenant, workspace, node, and field definition endpoints
 app.MapTenantEndpoints();
+app.MapWorkspaceEndpoints();
 app.MapNodeEndpoints();
 app.MapFieldDefinitionEndpoints();
 

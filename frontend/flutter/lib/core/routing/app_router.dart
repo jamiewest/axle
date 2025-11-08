@@ -10,6 +10,14 @@ import 'package:axle/presentation/auth/reset_password_view.dart';
 import 'package:axle/presentation/home/home_view.dart';
 import 'package:axle/presentation/examples/live_updates_demo.dart';
 import 'package:axle/presentation/screens/settings_screen.dart';
+import 'package:axle/presentation/tenants/create_tenant_view.dart';
+import 'package:axle/presentation/tenants/tenants_list_view.dart';
+import 'package:axle/presentation/tenants/edit_tenant_view.dart';
+import 'package:axle/presentation/tenants/tenant_detail_view.dart';
+import 'package:axle/presentation/workspaces/create_workspace_view.dart';
+import 'package:axle/presentation/workspaces/workspace_detail_view.dart';
+import 'package:axle/presentation/nodes/create_node_view.dart';
+import 'package:axle/presentation/nodes/node_detail_view.dart';
 
 /// Navigation observer for logging route changes.
 class _NavigationObserver extends NavigatorObserver {
@@ -149,6 +157,130 @@ GoRouter createAppRouter(SignInManager signInManager) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/tenants',
+        builder: (context, state) => const TenantsListView(),
+      ),
+      GoRoute(
+        path: '/create-tenant',
+        builder: (context, state) => const CreateTenantView(),
+      ),
+      GoRoute(
+        path: '/tenant/:id',
+        builder: (context, state) {
+          final tenantId = state.pathParameters['id'];
+          if (tenantId == null) {
+            return const _ErrorView(
+              message: 'Tenant ID is required',
+            );
+          }
+          return TenantDetailView(tenantId: tenantId);
+        },
+      ),
+      GoRoute(
+        path: '/edit-tenant/:id',
+        builder: (context, state) {
+          final tenantId = state.pathParameters['id'];
+          if (tenantId == null) {
+            return const _ErrorView(
+              message: 'Tenant ID is required',
+            );
+          }
+          return EditTenantView(tenantId: tenantId);
+        },
+      ),
+      GoRoute(
+        path: '/tenant/:tenantId/create-workspace',
+        builder: (context, state) {
+          final tenantId = state.pathParameters['tenantId'];
+          if (tenantId == null) {
+            return const _ErrorView(
+              message: 'Tenant ID is required',
+            );
+          }
+          return CreateWorkspaceView(tenantId: tenantId);
+        },
+      ),
+      GoRoute(
+        path: '/tenant/:tenantId/create-node',
+        builder: (context, state) {
+          final tenantId = state.pathParameters['tenantId'];
+          if (tenantId == null) {
+            return const _ErrorView(
+              message: 'Tenant ID is required',
+            );
+          }
+          return CreateNodeView(tenantId: tenantId);
+        },
+      ),
+      GoRoute(
+        path: '/workspace/:id',
+        builder: (context, state) {
+          final workspaceId = state.pathParameters['id'];
+          if (workspaceId == null) {
+            return const _ErrorView(
+              message: 'Workspace ID is required',
+            );
+          }
+          return WorkspaceDetailView(workspaceId: workspaceId);
+        },
+      ),
+      GoRoute(
+        path: '/workspace/:workspaceId/create-node',
+        builder: (context, state) {
+          final workspaceId = state.pathParameters['workspaceId'];
+          if (workspaceId == null) {
+            return const _ErrorView(
+              message: 'Workspace ID is required',
+            );
+          }
+          // Get tenantId from extra if available
+          final extra = state.extra as Map<String, dynamic>?;
+          final tenantId = extra?['tenantId'] as String?;
+          if (tenantId == null) {
+            return const _ErrorView(
+              message: 'Tenant ID is required',
+            );
+          }
+          return CreateNodeView(
+            tenantId: tenantId,
+            workspaceId: workspaceId,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/node/:id',
+        builder: (context, state) {
+          final nodeId = state.pathParameters['id'];
+          if (nodeId == null) {
+            return const _ErrorView(
+              message: 'Node ID is required',
+            );
+          }
+          return NodeDetailView(nodeId: nodeId);
+        },
+      ),
+      GoRoute(
+        path: '/tenant/:tenantId/node/:parentId/create-node',
+        builder: (context, state) {
+          final tenantId = state.pathParameters['tenantId'];
+          final parentId = state.pathParameters['parentId'];
+          if (tenantId == null) {
+            return const _ErrorView(
+              message: 'Tenant ID is required',
+            );
+          }
+          if (parentId == null) {
+            return const _ErrorView(
+              message: 'Parent Node ID is required',
+            );
+          }
+          return CreateNodeView(
+            tenantId: tenantId,
+            parentId: parentId,
+          );
+        },
       ),
     ],
   );

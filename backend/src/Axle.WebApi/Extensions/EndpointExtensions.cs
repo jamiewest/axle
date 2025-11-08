@@ -111,6 +111,70 @@ public static class EndpointExtensions
             return Results.Ok(response);
         });
 
+        // PUT /api/tenants/{id} - Update tenant
+        tenants.MapPut("/{id:guid}", async (
+            Guid id,
+            UpdateTenantRequest request,
+            ApplicationDbContext dbContext,
+            ILogger<Program> logger) =>
+        {
+            var tenant = await dbContext.Tenants.FindAsync(id);
+            if (tenant == null)
+            {
+                return Results.NotFound();
+            }
+
+            // Check if slug is being changed and if new slug already exists
+            if (tenant.Slug != request.Slug)
+            {
+                var slugExists = await dbContext.Tenants
+                    .AnyAsync(t => t.Slug == request.Slug && t.Id != id);
+
+                if (slugExists)
+                {
+                    return Results.BadRequest(new
+                    {
+                        message = "A tenant with this slug already exists",
+                        errors = new Dictionary<string, string[]>
+                        {
+                            { "slug", new[] { "This slug is already in use" } }
+                        }
+                    });
+                }
+            }
+
+            // Update tenant properties
+            tenant.Name = request.Name;
+            tenant.Slug = request.Slug;
+            tenant.IsActive = request.IsActive;
+            tenant.Settings = request.Settings;
+            tenant.UpdatedAt = DateTime.UtcNow;
+
+            try
+            {
+                await dbContext.SaveChangesAsync();
+
+                logger.LogInformation("Tenant {TenantId} updated successfully", tenant.Id);
+
+                var response = new TenantResponse(
+                    tenant.Id,
+                    tenant.Name,
+                    tenant.Slug,
+                    tenant.IsActive,
+                    tenant.Settings,
+                    tenant.CreatedAt,
+                    tenant.UpdatedAt
+                );
+
+                return Results.Ok(response);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error updating tenant {TenantId}", id);
+                return Results.Problem("Failed to update tenant");
+            }
+        });
+
         return app;
     }
 
@@ -140,6 +204,7 @@ public static class EndpointExtensions
             var responses = items.Select(n => new NodeResponse(
                 n.Id,
                 n.TenantId,
+                n.WorkspaceId,
                 n.ParentId,
                 n.Type,
                 n.Subtype,
@@ -173,6 +238,7 @@ public static class EndpointExtensions
             var response = new NodeResponse(
                 node.Id,
                 node.TenantId,
+                node.WorkspaceId,
                 node.ParentId,
                 node.Type,
                 node.Subtype,
@@ -201,6 +267,7 @@ public static class EndpointExtensions
                 Type = request.Type,
                 Subtype = request.Subtype,
                 Name = request.Name,
+                WorkspaceId = request.WorkspaceId,
                 ParentId = request.ParentId,
                 Meta = request.Meta != null
                     ? JsonSerializer.Serialize(request.Meta)
@@ -212,6 +279,7 @@ public static class EndpointExtensions
             var response = new NodeResponse(
                 created.Id,
                 created.TenantId,
+                created.WorkspaceId,
                 created.ParentId,
                 created.Type,
                 created.Subtype,
@@ -254,6 +322,7 @@ public static class EndpointExtensions
             var response = new NodeResponse(
                 updated.Id,
                 updated.TenantId,
+                updated.WorkspaceId,
                 updated.ParentId,
                 updated.Type,
                 updated.Subtype,
@@ -296,6 +365,7 @@ public static class EndpointExtensions
             var responses = children.Select(n => new NodeResponse(
                 n.Id,
                 n.TenantId,
+                n.WorkspaceId,
                 n.ParentId,
                 n.Type,
                 n.Subtype,
@@ -515,6 +585,315 @@ public static class EndpointExtensions
 
             var response = new ValidateFieldValueResponse(isValid, errors);
             return Results.Ok(response);
+        });
+
+        return app;
+    }
+
+    public static WebApplication MapWorkspaceEndpoints(this WebApplication app)
+    {
+        var workspaces = app.MapGroup("/api/workspaces").RequireAuthorization();
+
+        // GET /api/workspaces - List workspaces with pagination and filters
+        workspaces.MapGet("/", async (
+            HttpContext context,
+            ApplicationDbContext dbContext,
+            string? tenantId = null,
+            int page = 1,
+            int pageSize = 50,
+            bool? isActive = null) =>
+        {
+            var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                return Results.BadRequest(new { message = "TenantId is required" });
+            }
+
+            if (!Guid.TryParse(tenantId, out var tenantGuid))
+            {
+                return Results.BadRequest(new { message = "Invalid TenantId format" });
+            }
+
+            // Verify user has access to this tenant
+            var hasAccess = await dbContext.TenantUsers
+                .AnyAsync(tu => tu.TenantId == tenantGuid && tu.UserId == userId && tu.IsActive);
+
+            if (!hasAccess)
+            {
+                return Results.Forbid();
+            }
+
+            var query = dbContext.Workspaces
+                .Include(w => w.CreatedBy)
+                .Include(w => w.UpdatedBy)
+                .Where(w => w.TenantId == tenantGuid);
+
+            if (isActive.HasValue)
+            {
+                query = query.Where(w => w.IsActive == isActive.Value);
+            }
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(w => w.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var responses = items.Select(w => new WorkspaceResponse(
+                w.Id,
+                w.TenantId,
+                w.Name,
+                w.Description,
+                w.IsActive,
+                w.CreatedAt,
+                w.CreatedById,
+                w.CreatedBy?.FullName,
+                w.UpdatedAt,
+                w.UpdatedById,
+                w.UpdatedBy?.FullName
+            )).ToList();
+
+            var response = new WorkspaceListResponse(responses, totalCount, page, pageSize);
+            return Results.Ok(response);
+        });
+
+        // GET /api/workspaces/{id} - Get single workspace
+        workspaces.MapGet("/{id:guid}", async (
+            Guid id,
+            HttpContext context,
+            ApplicationDbContext dbContext) =>
+        {
+            var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var workspace = await dbContext.Workspaces
+                .Include(w => w.CreatedBy)
+                .Include(w => w.UpdatedBy)
+                .FirstOrDefaultAsync(w => w.Id == id);
+
+            if (workspace == null)
+            {
+                return Results.NotFound();
+            }
+
+            // Verify user has access to this workspace's tenant
+            var hasAccess = await dbContext.TenantUsers
+                .AnyAsync(tu => tu.TenantId == workspace.TenantId && tu.UserId == userId && tu.IsActive);
+
+            if (!hasAccess)
+            {
+                return Results.Forbid();
+            }
+
+            var response = new WorkspaceResponse(
+                workspace.Id,
+                workspace.TenantId,
+                workspace.Name,
+                workspace.Description,
+                workspace.IsActive,
+                workspace.CreatedAt,
+                workspace.CreatedById,
+                workspace.CreatedBy?.FullName,
+                workspace.UpdatedAt,
+                workspace.UpdatedById,
+                workspace.UpdatedBy?.FullName
+            );
+
+            return Results.Ok(response);
+        });
+
+        // POST /api/workspaces - Create new workspace
+        workspaces.MapPost("/", async (
+            CreateWorkspaceRequest request,
+            HttpContext context,
+            ApplicationDbContext dbContext,
+            ILogger<Program> logger) =>
+        {
+            var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Verify user has access to the tenant
+            var hasAccess = await dbContext.TenantUsers
+                .AnyAsync(tu => tu.TenantId == request.TenantId && tu.UserId == userId && tu.IsActive);
+
+            if (!hasAccess)
+            {
+                return Results.Forbid();
+            }
+
+            var workspace = new Workspace
+            {
+                TenantId = request.TenantId,
+                Name = request.Name,
+                Description = request.Description,
+                CreatedById = userId
+            };
+
+            dbContext.Workspaces.Add(workspace);
+            await dbContext.SaveChangesAsync();
+
+            logger.LogInformation("Workspace {WorkspaceId} created by user {UserId}", workspace.Id, userId);
+
+            // Reload to get navigation properties
+            await dbContext.Entry(workspace).Reference(w => w.CreatedBy).LoadAsync();
+
+            var response = new WorkspaceResponse(
+                workspace.Id,
+                workspace.TenantId,
+                workspace.Name,
+                workspace.Description,
+                workspace.IsActive,
+                workspace.CreatedAt,
+                workspace.CreatedById,
+                workspace.CreatedBy?.FullName,
+                workspace.UpdatedAt,
+                workspace.UpdatedById,
+                null
+            );
+
+            return Results.Created($"/api/workspaces/{workspace.Id}", response);
+        });
+
+        // PUT /api/workspaces/{id} - Update workspace
+        workspaces.MapPut("/{id:guid}", async (
+            Guid id,
+            UpdateWorkspaceRequest request,
+            HttpContext context,
+            ApplicationDbContext dbContext,
+            ILogger<Program> logger) =>
+        {
+            var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var workspace = await dbContext.Workspaces.FindAsync(id);
+            if (workspace == null)
+            {
+                return Results.NotFound();
+            }
+
+            // Verify user has access to the workspace's tenant
+            var hasAccess = await dbContext.TenantUsers
+                .AnyAsync(tu => tu.TenantId == workspace.TenantId && tu.UserId == userId && tu.IsActive);
+
+            if (!hasAccess)
+            {
+                return Results.Forbid();
+            }
+
+            // Update workspace properties
+            workspace.Name = request.Name;
+            workspace.Description = request.Description;
+            if (request.IsActive.HasValue)
+            {
+                workspace.IsActive = request.IsActive.Value;
+            }
+            workspace.UpdatedAt = DateTime.UtcNow;
+            workspace.UpdatedById = userId;
+
+            try
+            {
+                await dbContext.SaveChangesAsync();
+
+                logger.LogInformation("Workspace {WorkspaceId} updated by user {UserId}", workspace.Id, userId);
+
+                // Reload to get navigation properties
+                await dbContext.Entry(workspace).Reference(w => w.CreatedBy).LoadAsync();
+                await dbContext.Entry(workspace).Reference(w => w.UpdatedBy).LoadAsync();
+
+                var response = new WorkspaceResponse(
+                    workspace.Id,
+                    workspace.TenantId,
+                    workspace.Name,
+                    workspace.Description,
+                    workspace.IsActive,
+                    workspace.CreatedAt,
+                    workspace.CreatedById,
+                    workspace.CreatedBy?.FullName,
+                    workspace.UpdatedAt,
+                    workspace.UpdatedById,
+                    workspace.UpdatedBy?.FullName
+                );
+
+                return Results.Ok(response);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error updating workspace {WorkspaceId}", id);
+                return Results.Problem("Failed to update workspace");
+            }
+        });
+
+        // DELETE /api/workspaces/{id} - Delete workspace
+        workspaces.MapDelete("/{id:guid}", async (
+            Guid id,
+            HttpContext context,
+            ApplicationDbContext dbContext,
+            ILogger<Program> logger) =>
+        {
+            var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var workspace = await dbContext.Workspaces.FindAsync(id);
+            if (workspace == null)
+            {
+                return Results.NotFound();
+            }
+
+            // Verify user has access to the workspace's tenant
+            var hasAccess = await dbContext.TenantUsers
+                .AnyAsync(tu => tu.TenantId == workspace.TenantId && tu.UserId == userId && tu.IsActive);
+
+            if (!hasAccess)
+            {
+                return Results.Forbid();
+            }
+
+            // Check if workspace has nodes
+            var hasNodes = await dbContext.Nodes.AnyAsync(n => n.WorkspaceId == id);
+            if (hasNodes)
+            {
+                return Results.BadRequest(new
+                {
+                    message = "Cannot delete workspace that contains nodes",
+                    errors = new Dictionary<string, string[]>
+                    {
+                        { "workspace", new[] { "Workspace must be empty before deletion" } }
+                    }
+                });
+            }
+
+            try
+            {
+                dbContext.Workspaces.Remove(workspace);
+                await dbContext.SaveChangesAsync();
+
+                logger.LogInformation("Workspace {WorkspaceId} deleted by user {UserId}", id, userId);
+
+                return Results.NoContent();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error deleting workspace {WorkspaceId}", id);
+                return Results.Problem("Failed to delete workspace");
+            }
         });
 
         return app;
